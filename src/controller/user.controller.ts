@@ -7,17 +7,18 @@ export const getAllUsers = (req: Request, res: Response) => {
 
 export const createUser = async (req: Request, res: Response) => {
   try {
-    await prisma.user.create({
+    const {name, email, password} = req.body;
+    const user = await prisma.user.create({
       data: {
-        name: 'Aryan',
-        email: 'aryan@broy.com',
-        password: 'aryan1234',
+        name,
+        email,
+        password,
       },
     });
 
-    const users = await prisma.user.findMany();
+    // const users = await prisma.user.findMany();
 
-    res.status(201).json({ users });
+    res.status(201).json({ user });
   } catch (err) {
     console.log('Error occurred: ', err);
     res.status(400).json(err);
