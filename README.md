@@ -1,2 +1,2 @@
 niga1 := Aryan
-niga2 := "niga 2 edit here"
+niga2 := Swayanshu004
