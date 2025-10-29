@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import prisma from '../prisma';
 
 export const getAllUsers = (req: Request, res: Response) => {
-  res.status(200).json({ failure: false });
+  console.log("Check");
+  // res.status(200).json({ failure: false });
 };
 
 export const createUser = async (req: Request, res: Response) => {
