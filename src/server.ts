@@ -1,6 +1,9 @@
 import express, { Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import dontenv from 'dotenv';
+
+dontenv.config();
 
 const app = express();
 app.use(
@@ -22,8 +25,10 @@ app.get('/', (_, res: Response) => {
 });
 
 import userRouter from './routes/user.route';
+import authRouter from './routes/auth.route';
 
-app.use('/api', userRouter);
+app.use('/api/user', userRouter);
+app.use('/api/auth', authRouter);
 
 app.listen(port, () => {
   console.log(`Server listening to port: ${port}`);
