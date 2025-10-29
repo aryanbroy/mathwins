@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import prisma from '../prisma';
 
 export const getAllUsers = (req: Request, res: Response) => {
+  console.log("NIgga1");
+  console.log("NIgga2");
   res.status(200).json({ failure: false });
 };
 
