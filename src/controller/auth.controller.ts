@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { OAuth2Client } from 'google-auth-library';
-import prisma from '../prisma';
 
 const client = new OAuth2Client();
 
@@ -23,4 +22,8 @@ export const googleAuth = async (req: Request, res: Response) => {
     console.log(err);
     res.status(400).json({ err });
   }
+};
+
+export const demoTest = () => {
+  console.log('hello terhe');
 };
