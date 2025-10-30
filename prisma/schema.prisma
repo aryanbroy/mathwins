@@ -48,9 +48,10 @@ model User {
   googleId      String     @unique
   role          Role       @default(USER)
   avatarUrl     String?
+  points         BigInt     @default(0)
+  lifeTimePoints BigInt     @default(0)
+  bestScore     BigInt     @default(0)
   coinsToday    BigIn      @default(0)
-  coins         BigInt     @default(0)
-  lifeTimeCoins BigInt     @default(0)
   level         Int        @default(1)
   lifeline      Lifeline?
   createdAt     DateTime   @default(now())
@@ -96,7 +97,7 @@ model Leaderboard {
   updatedAt     DateTime   @updatedAt
 }
 
-model Singleplayer {
+model Solo {
   id            Int        @id @default(autoincrement())
   question      Question[]
   createdAt     DateTime   @default(now())
