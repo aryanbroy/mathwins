@@ -40,22 +40,21 @@ enum TournamentStatus {
 }
 
 model User {
-  id            Int        @id @default(autoincrement())
-  name          String     @unique
-  email         String
-  phone         String     @unique
-  password      String
-  googleId      String     @unique
-  role          Role       @default(USER)
-  avatarUrl     String?
-  points         BigInt     @default(0)
-  lifeTimePoints BigInt     @default(0)
-  bestScore     BigInt     @default(0)
-  coinsToday    BigIn      @default(0)
-  level         Int        @default(1)
-  lifeline      Lifeline?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id              Int        @id @default(autoincrement())
+  name            String     @unique
+  email           String
+  phone           String     @unique
+  password        String
+  googleId        String     @unique
+  role            Role       @default(USER)
+  avatarUrl       String?
+  points          BigInt     @default(0)
+  lifeTimePoints  BigInt     @default(0)
+  bestScore       BigInt     @default(0)
+  level           Int        @default(1)
+  lifeline        Lifeline?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 }
 
 model Question {
@@ -91,10 +90,14 @@ model Transaction {
 } 
 
 model Leaderboard {
-  id            Int        @id @default(autoincrement())
-  user          User[]
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id                  Int        @id @default(autoincrement())
+  user                User       @relation(fields: [userId], references: [id])
+  userId              Int        @unique
+  solo                BigInt     @default(0)
+  dailyTournament     BigInt     @default(0)
+  instantTournament   BigInt     @default(0)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 }
 
 model Solo {
