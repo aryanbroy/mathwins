@@ -30,7 +30,7 @@ enum TransactionType {
   DECREMENT
 }
 
-enum TransactionDesciption {
+enum TransactionDescription {
   SINGLE_PLAYER
   DAILY_TROURNAMET
   INSTANT_TROURNAMET
@@ -47,11 +47,12 @@ enum TournamentStatus {
 
 model User {
   id                           Int                           @id @default(autoincrement())
-  name                         String                        @unique
-  email                        String
-  phone                        String                        @unique
+  name                         String
+  username                     String                        @unique
+  email                        String?
+  phone                        String?                       @unique
   password                     String
-  googleId                     String                        @unique
+  googleId                     String?                       @unique
   role                         Role                          @default(USER)
   avatarUrl                    String?
   points                       BigInt                        @default(0)
@@ -92,14 +93,14 @@ model Lifeline {
 }
 
 model Transaction {
-  id         Int                   @id @default(autoincrement())
-  user       User                  @relation(fields: [userId], references: [id])
+  id         Int                    @id @default(autoincrement())
+  user       User                   @relation(fields: [userId], references: [id])
   userId     Int
   amount     Int
   type       TransactionType
-  desciption TransactionDesciption
-  createdAt  DateTime              @default(now())
-  updatedAt  DateTime              @updatedAt
+  desciption TransactionDescription
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
 
   @@index([userId])
 }
