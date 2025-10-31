@@ -19,13 +19,13 @@ export const createTournament = async (size: number) => {
     targetCounts.EASY += remainder;
     const [easyQuestions, mediumQuestions, hardQuestions] = await prisma.$transaction([
       prisma.question.findMany({
-        where: { difficulty: "EASY" },
+        where: { difficulty: 1 },
       }),
       prisma.question.findMany({
-        where: { difficulty: "MEDIUM" },
+        where: { difficulty: 2 },
       }),
       prisma.question.findMany({
-        where: { difficulty: "HARD" },
+        where: { difficulty: 3 },
       }),
     ]);
 
@@ -60,3 +60,7 @@ export const createTournament = async (size: number) => {
     throw new Error("Error Occured !!");
   }
 };
+
+export const gameConfig = async () => {
+
+}

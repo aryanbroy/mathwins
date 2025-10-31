@@ -19,12 +19,6 @@ enum Role {
   ADMIN
 }
 
-enum Difficulty {
-  EASY
-  MEDIUM
-  HARD
-}
-
 enum TransactionType {
   INCREMENT
   DECREMENT
@@ -71,13 +65,13 @@ model User {
 }
 
 model Question {
-  id         Int        @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   question   String
   option     String[]
   answer     Int
-  difficulty Difficulty
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  difficulty Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Lifeline {
@@ -116,12 +110,13 @@ model SoloAttempt {
 }
 
 model DailyTournamentAttempt {
-  id        Int      @id @default(autoincrement())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    Int
-  score     BigInt   @default(0)
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int
+  score      BigInt   @default(0)
+  createdAt  DateTime @default(now())
   submitedAt DateTime
+
   @@index([userId, createdAt])
 }
 
