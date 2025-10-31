@@ -13,7 +13,7 @@ app.use(
   })
 );
 
-// app.use(express.json({ limit: '16kb' }));
+app.use(express.json({ limit: '16kb' }));
 app.use(express.urlencoded({ extended: true, limit: '16kb' }));
 app.use(express.static('public'));
 app.use(cookieParser());
@@ -26,9 +26,11 @@ app.get('/', (_, res: Response) => {
 
 import userRouter from './routes/user.route';
 import authRouter from './routes/auth.route';
+import gameRouter from './routes/game.route';
 
 app.use('/api/user', userRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/game', gameRouter);
 
 app.listen(port, () => {
   console.log(`Server listening to port: ${port}`);

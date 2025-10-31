@@ -18,21 +18,25 @@ enum Role {
   USER
   ADMIN
 }
+
 enum Difficulty {
   EASY
   MEDIUM
   HARD
 }
+
 enum TransactionType {
   INCREMENT
   DECREMENT
 }
+
 enum TransactionDesciption {
   SINGLE_PLAYER
   DAILY_TROURNAMET
   INSTANT_TROURNAMET
   REFERAL_POINT
 }
+
 enum TournamentStatus {
   OPEN
   CLOSED
@@ -40,85 +44,93 @@ enum TournamentStatus {
 }
 
 model User {
-  id              Int        @id @default(autoincrement())
-  name            String     @unique
-  email           String
-  phone           String     @unique
-  password        String
-  googleId        String     @unique
-  role            Role       @default(USER)
-  avatarUrl       String?
-  points          BigInt     @default(0)
-  lifeTimePoints  BigInt     @default(0)
-  bestScore       BigInt     @default(0)
-  level           Int        @default(1)
-  lifeline        Lifeline?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  id             Int           @id @default(autoincrement())
+  name           String        @unique
+  email          String
+  phone          String        @unique
+  password       String
+  googleId       String        @unique
+  role           Role          @default(USER)
+  avatarUrl      String?
+  points         BigInt        @default(0)
+  lifeTimePoints BigInt        @default(0)
+  bestScore      BigInt        @default(0)
+  level          Int           @default(1)
+  lifeline       Lifeline?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  Transaction    Transaction[]
+  Leaderboard    Leaderboard?
 }
 
 model Question {
-  id            Int        @id @default(autoincrement())
-  question      String
-  option        String[]?
-  answer        Int
-  difficulty    Difficulty
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id                  Int                @id @default(autoincrement())
+  question            String
+  option              String[]
+  answer              Int
+  difficulty          Difficulty
+  Solo                Solo?              @relation(fields: [soloId], references: [id])
+  soloId              Int?
+  Dailytournament     Dailytournament?   @relation(fields: [dailytournamentId], references: [id])
+  dailytournamentId   Int?
+  Instanttournament   Instanttournament? @relation(fields: [instanttournamentId], references: [id])
+  instanttournamentId Int?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 }
 
 model Lifeline {
-  id            Int        @id @default(autoincrement())
-  user          User       @relation(fields: [userId], references: [id])
-  userId        Int        @unique
-  fifty         Boolean    @default(false)
-  levelDown     Boolean    @default(false)
-  extraTime     Boolean    @default(false)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int      @unique
+  fifty     Boolean  @default(false)
+  levelDown Boolean  @default(false)
+  extraTime Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Transaction {
-  id            Int                     @id @default(autoincrement())
-  user          User                    @relation(fields: [userId], references: [id])
-  userId        Int
-  amount        Int       
-  type          TransactionType
-  desciption    TransactionDesciption   @default(0)
-  createdAt     DateTime                @default(now())
-  updatedAt     DateTime                @updatedAt
-} 
+  id         Int                   @id @default(autoincrement())
+  user       User                  @relation(fields: [userId], references: [id])
+  userId     Int
+  amount     Int
+  type       TransactionType
+  desciption TransactionDesciption
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+}
 
 model Leaderboard {
-  id                  Int        @id @default(autoincrement())
-  user                User       @relation(fields: [userId], references: [id])
-  userId              Int        @unique
-  solo                BigInt     @default(0)
-  dailyTournament     BigInt     @default(0)
-  instantTournament   BigInt     @default(0)
-  createdAt           DateTime   @default(now())
-  updatedAt           DateTime   @updatedAt
+  id                Int      @id @default(autoincrement())
+  user              User     @relation(fields: [userId], references: [id])
+  userId            Int      @unique
+  solo              BigInt   @default(0)
+  dailyTournament   BigInt   @default(0)
+  instantTournament BigInt   @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model Solo {
-  id            Int        @id @default(autoincrement())
-  question      Question[]
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-}   
+  id        Int        @id @default(autoincrement())
+  question  Question[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
 
 model Dailytournament {
-  id            Int        @id @default(autoincrement())
-  question      Question[]
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id        Int        @id @default(autoincrement())
+  question  Question[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model Instanttournament {
-  id            Int              @id @default(autoincrement())
-  code          Int
-  status        TournamentStatus @default(OPEN)
-  question      Question[]
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id        Int              @id @default(autoincrement())
+  code      Int
+  status    TournamentStatus @default(OPEN)
+  question  Question[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 }
