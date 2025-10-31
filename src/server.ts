@@ -21,7 +21,7 @@ app.use(cookieParser());
 const port = 3000;
 
 app.get('/', (_, res: Response) => {
-  res.send('Hello niga, meow meow');
+  res.send('Check - Success');
 });
 
 import userRouter from './routes/user.route';

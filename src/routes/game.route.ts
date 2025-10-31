@@ -1,8 +1,10 @@
 import { Router } from 'express';
-import { addQuestion } from '../controller/game.controller';
+import { addQuestion, createTournament, Leaderboard } from '../controller/game.controller';
 
 const router = Router();
 
-router.post('/add', addQuestion);
+router.post('/addQuestion', addQuestion);
+router.post('/createTournament', createTournament);
+router.post('/Leaderboard', Leaderboard);
 
 export default router;
