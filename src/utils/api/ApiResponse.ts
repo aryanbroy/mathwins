@@ -1,12 +1,12 @@
 interface ApiResponse {
   statusCode: number;
-  data: string;
+  data: any;
   message: string;
   success: boolean;
 }
 
 class ApiResponse implements ApiResponse {
-  constructor(statusCode: number, data: string, message = 'Success') {
+  constructor(statusCode: number, data: any, message = 'Success') {
     this.statusCode = statusCode;
     this.data = data;
     this.message = message;
