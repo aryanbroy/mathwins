@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../prisma';
 import { ApiError } from '../utils/api/ApiError';
+import { ApiResponse } from '../utils/api/ApiResponse';
 
 export const getAllUsers = async (req: Request, res: Response) => {
   return res.send('Done');
@@ -19,7 +20,7 @@ export const createUser = async (req: Request, res: Response) => {
       throw new ApiError(400, 'Username already exists');
     }
 
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         name,
         username,
@@ -28,9 +29,11 @@ export const createUser = async (req: Request, res: Response) => {
       },
     });
 
-    res.status(201).json({ user: 'user' });
+    res
+      .status(201)
+      .json(new ApiResponse(201, user, 'Created new user succussfuly'));
   } catch (err) {
     console.log('Error occurred: ', err);
-    res.status(400).json(err);
+    throw new ApiError(500, 'Error creating new user');
   }
 };
