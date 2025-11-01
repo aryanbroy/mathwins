@@ -1,4 +1,4 @@
-import prisma from "../prisma";
+import prisma from '../prisma';
 
 function shuffle(array: any[]): any[] {
   for (let i = array.length - 1; i > 0; i--) {
@@ -7,7 +7,7 @@ function shuffle(array: any[]): any[] {
   }
   return array;
 }
-export const createTournament = async (size: number) => {
+export const createQuestions = async (size: number) => {
   try {
     const totalQuestions = size;
     const targetCounts = {
@@ -15,19 +15,22 @@ export const createTournament = async (size: number) => {
       MEDIUM: Math.floor(totalQuestions * 0.3),
       HARD: Math.floor(totalQuestions * 0.3),
     };
-    const remainder = totalQuestions - (targetCounts.EASY + targetCounts.MEDIUM + targetCounts.HARD);
+    const remainder =
+      totalQuestions -
+      (targetCounts.EASY + targetCounts.MEDIUM + targetCounts.HARD);
     targetCounts.EASY += remainder;
-    const [easyQuestions, mediumQuestions, hardQuestions] = await prisma.$transaction([
-      prisma.question.findMany({
-        where: { difficulty: 1 },
-      }),
-      prisma.question.findMany({
-        where: { difficulty: 2 },
-      }),
-      prisma.question.findMany({
-        where: { difficulty: 3 },
-      }),
-    ]);
+    const [easyQuestions, mediumQuestions, hardQuestions] =
+      await prisma.$transaction([
+        prisma.question.findMany({
+          where: { difficulty: 1 },
+        }),
+        prisma.question.findMany({
+          where: { difficulty: 2 },
+        }),
+        prisma.question.findMany({
+          where: { difficulty: 3 },
+        }),
+      ]);
 
     const available = {
       EASY: shuffle(easyQuestions),
@@ -45,7 +48,7 @@ export const createTournament = async (size: number) => {
     selectedQuestions.push(...hardPicks);
 
     let shortfall = totalQuestions - selectedQuestions.length;
-     if (shortfall > 0) {
+    if (shortfall > 0) {
       const fallbackPool = [
         ...available.EASY,
         ...available.MEDIUM,
@@ -57,6 +60,13 @@ export const createTournament = async (size: number) => {
     return selectedQuestions;
   } catch (err) {
     console.log('Error occurred: ', err);
-    throw new Error("Error Occured !!");
+    throw new Error('Error Occured !!');
   }
+<<<<<<< HEAD
 };
+=======
+};
+
+export const gameConfig = async () => {};
+
+>>>>>>> 193ec824b6e98ec2799ebc65097c3028a43f2744
