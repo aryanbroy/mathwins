@@ -110,12 +110,12 @@ model SoloAttempt {
 }
 
 model DailyTournamentAttempt {
-  id         Int      @id @default(autoincrement())
-  user       User     @relation(fields: [userId], references: [id])
+  id         Int       @id @default(autoincrement())
+  user       User      @relation(fields: [userId], references: [id])
   userId     Int
-  score      BigInt   @default(0)
-  createdAt  DateTime @default(now())
-  submitedAt DateTime
+  score      BigInt    @default(0)
+  createdAt  DateTime  @default(now())
+  submitedAt DateTime?
 
   @@index([userId, createdAt])
 }

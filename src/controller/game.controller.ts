@@ -5,12 +5,12 @@ import gameConfig from '../utils/game.config';
 export const addQuestion = async (req: Request, res: Response) => {
   try {
     console.log(req.body);
-    const { question, option, answer, difficulty} = req.body;
+    const { question, option, answer, difficulty } = req.body;
     const qs = await prisma.question.create({
       data: {
-        question,       
+        question,
         option,
-        answer,             
+        answer,
         difficulty,
       },
     });
@@ -84,8 +84,14 @@ export const Leaderboard = async (req: Request, res: Response) => {
       },
     });
 
-    const [allTimeResults,soloResults,dailyResults,instantResults,] = await prisma.$transaction([allTimeQuery,soloQuery,dailyQuery,instantQuery,]);
-    
+    const [allTimeResults, soloResults, dailyResults, instantResults] =
+      await prisma.$transaction([
+        allTimeQuery,
+        soloQuery,
+        dailyQuery,
+        instantQuery,
+      ]);
+
     const allTimeLeaders = allTimeResults.map((user, index) => ({
       rank: index + 1,
       userName: user.name,
@@ -125,13 +131,14 @@ export const Leaderboard = async (req: Request, res: Response) => {
     console.error('Error fetching top performers:', error);
     throw new Error('Could not fetch leaderboard data.');
   }
-}
+};
 
 export const getGameConfig = (req: Request, res: Response) => {
-  try{
+  try {
     res.status(201).json(gameConfig);
   } catch (error) {
     console.log('Failed to get - game.config');
     throw new Error('Failed');
   }
-}
+};
+
