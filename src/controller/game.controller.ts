@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../prisma';
 import gameConfig from '../utils/game.config';
+import { createTournament } from '../utils/tournament.utils';
 
 export const addQuestion = async (req: Request, res: Response) => {
   try {
@@ -133,5 +134,14 @@ export const getGameConfig = (req: Request, res: Response) => {
   } catch (error) {
     console.log('Failed to get - game.config');
     throw new Error('Failed');
+  }
+}
+
+export const createSet = async (req: Request, res: Response) => {
+  try {
+    const question = await createTournament(5);
+    res.status(201).json(question);
+  } catch (error) {
+    res.status(501).send("Error")
   }
 }

@@ -27,10 +27,12 @@ app.get('/', (_, res: Response) => {
 import userRouter from './routes/user.route';
 import authRouter from './routes/auth.route';
 import gameRouter from './routes/game.route';
+import soloRouter from './routes/solo.route';
 
 app.use('/api/user', userRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/game', gameRouter);
+app.use('/api/solo', soloRouter);
 
 app.listen(port, () => {
   console.log(`Server listening to port: ${port}`);

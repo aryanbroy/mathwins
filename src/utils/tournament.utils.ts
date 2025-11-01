@@ -60,7 +60,3 @@ export const createTournament = async (size: number) => {
     throw new Error("Error Occured !!");
   }
 };
-
-export const gameConfig = async () => {
-
-}
