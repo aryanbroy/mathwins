@@ -63,6 +63,3 @@ export const createQuestions = async (size: number) => {
     throw new Error('Error Occured !!');
   }
 };
-
-export const gameConfig = async () => {};
-

@@ -1,24 +1,34 @@
 import { Request, Response } from 'express';
 import prisma from '../prisma';
+import { ApiError } from '../utils/api/ApiError';
 
 export const getAllUsers = async (req: Request, res: Response) => {
-  return res.send("Done");
+  return res.send('Done');
 };
 
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { name, email, password } = req.body;
-    // const user = await prisma.user.create({
-    //   data: {
-    //     name,
-    //     email,
-    //     password,
-    //   },
-    // });
+    const { name, username, email, password } = req.body;
+    const usernameExists = await prisma.user.findFirst({
+      where: {
+        username: username,
+      },
+    });
 
-    // const users = await prisma.user.findMany();
+    if (usernameExists) {
+      throw new ApiError(400, 'Username already exists');
+    }
 
-    res.status(201).json({ user:"user" });
+    await prisma.user.create({
+      data: {
+        name,
+        username,
+        email,
+        password,
+      },
+    });
+
+    res.status(201).json({ user: 'user' });
   } catch (err) {
     console.log('Error occurred: ', err);
     res.status(400).json(err);

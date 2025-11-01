@@ -65,13 +65,15 @@ model User {
 }
 
 model Question {
-  id         Int      @id @default(autoincrement())
-  question   String
-  option     String[]
-  answer     Int
-  difficulty Int
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id            Int          @id @default(autoincrement())
+  question      String
+  option        String[]
+  answer        Int
+  difficulty    Int
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  SoloAttempt   SoloAttempt? @relation(fields: [soloAttemptId], references: [id])
+  soloAttemptId Int?
 }
 
 model Lifeline {
@@ -100,11 +102,13 @@ model Transaction {
 }
 
 model SoloAttempt {
-  id        Int      @id @default(autoincrement())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    Int
-  score     BigInt
-  createdAt DateTime @default(now())
+  id         Int        @id @default(autoincrement())
+  user       User       @relation(fields: [userId], references: [id])
+  userId     Int
+  score      BigInt
+  question   Question[]
+  createdAt  DateTime   @default(now())
+  submitedAt DateTime
 
   @@index([userId, createdAt])
 }
