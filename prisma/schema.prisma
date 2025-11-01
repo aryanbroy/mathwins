@@ -1,11 +1,10 @@
-// This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
@@ -26,8 +25,8 @@ enum TransactionType {
 
 enum TransactionDescription {
   SINGLE_PLAYER
-  DAILY_TROURNAMET
-  INSTANT_TROURNAMET
+  DAILY_TOURNAMENT
+  INSTANT_TOURNAMENT
   REFERAL_POINT
   REWARD_CLAIM
 }
@@ -56,24 +55,23 @@ model User {
   lifeline                     Lifeline?
   createdAt                    DateTime                      @default(now())
   updatedAt                    DateTime                      @updatedAt
-  Transaction                  Transaction[]
+  transactions                 Transaction[]
   historicalLeaderboards       DailyUserLeaderboardFinal[]
   soloAttempts                 SoloAttempt[]
   dailyTournamentAttempts      DailyTournamentAttempt[]
   instantTournamentSubmissions InstantTournamentSubmission[]
-  LiveDailyLeaderboard         LiveDailyLeaderboard?
+  liveDailyLeaderboard         LiveDailyLeaderboard?
 }
 
 model Question {
-  id            Int          @id @default(autoincrement())
-  question      String
-  option        String[]
-  answer        Int
-  difficulty    Int
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  SoloAttempt   SoloAttempt? @relation(fields: [soloAttemptId], references: [id])
-  soloAttemptId Int?
+  id           Int            @id @default(autoincrement())
+  question     String
+  option       String[]
+  answer       Int
+  difficulty   Int
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  soloAttempts SoloAttempt[]
 }
 
 model Lifeline {
@@ -89,25 +87,25 @@ model Lifeline {
 }
 
 model Transaction {
-  id         Int                    @id @default(autoincrement())
-  user       User                   @relation(fields: [userId], references: [id])
-  userId     Int
-  amount     Int
-  type       TransactionType
-  desciption TransactionDescription
-  createdAt  DateTime               @default(now())
-  updatedAt  DateTime               @updatedAt
+  id          Int                    @id @default(autoincrement())
+  user        User                   @relation(fields: [userId], references: [id])
+  userId      Int
+  amount      Int
+  type        TransactionType
+  description TransactionDescription
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
 
   @@index([userId])
 }
 
 model SoloAttempt {
-  id         Int        @id @default(autoincrement())
-  user       User       @relation(fields: [userId], references: [id])
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id])
   userId     Int
   score      BigInt
-  question   Question[]
-  createdAt  DateTime   @default(now())
+  questions   Question[]
+  createdAt  DateTime @default(now())
   submitedAt DateTime
 
   @@index([userId, createdAt])
@@ -156,7 +154,7 @@ model DailyUserLeaderboardFinal {
   finalRank           Int
   createdAt           DateTime @default(now())
   coinPointsBreakdown Json?
-  // `Explain how Total point is calculated` coinPointsBreakdown : { "dailyPoints": 120, "instantPointsSum": 310, "soloPointsSum": 150 }
+  // coinPointsBreakdown example: { "dailyPoints": 120, "instantPointsSum": 310, "soloPointsSum": 150 }
 
   @@unique([userId, date])
   @@index([date, finalRank(sort: Asc)])

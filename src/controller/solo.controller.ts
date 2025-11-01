@@ -36,6 +36,7 @@ export const startSolo = async (req: Request, res: Response) => {
         data: {
           userId: userId,
           score: 0,
+          submitedAt: new Date(),
           question: {
             create: questions.map((q) => ({
               question: q.question,
