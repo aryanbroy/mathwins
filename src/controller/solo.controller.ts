@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../prisma';
-import { createTournament } from '../utils/tournament.utils';
+import { createQuestions } from '../utils/tournament.utils';
 import gameConfig from '../utils/game.config';
 
 export const startSolo = async (req: Request, res: Response) => {
@@ -27,7 +27,7 @@ export const startSolo = async (req: Request, res: Response) => {
       res.status(501).send("No Free Attempt Available for Today");
     }
     const attemptsLeft = freeAttemptsAllowed - attemptsCount;
-    const questions = await createTournament(5); 
+    const questions = await createQuestions(5); 
     if (!questions || questions.length !== totalQuestionsInRun) {
       res.status(501).send("Could not generate a full set of ${totalQuestionsInRun} questions. Please try again.");
     }
