@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../prisma';
+import gameConfig from '../utils/game.config';
 
 export const addQuestion = async (req: Request, res: Response) => {
   try {
@@ -123,5 +124,14 @@ export const Leaderboard = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching top performers:', error);
     throw new Error('Could not fetch leaderboard data.');
+  }
+}
+
+export const getGameConfig = (req: Request, res: Response) => {
+  try{
+    res.status(201).json(gameConfig);
+  } catch (error) {
+    console.log('Failed to get - game.config');
+    throw new Error('Failed');
   }
 }

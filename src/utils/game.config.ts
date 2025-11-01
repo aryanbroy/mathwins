@@ -1,4 +1,4 @@
-const masterConfig = {
+const gameConfig = {
     version: '1.0.1',
     updated_at: '2025-11',
 
@@ -91,3 +91,5 @@ const masterConfig = {
       },
     },
   };
+
+  export default gameConfig;
