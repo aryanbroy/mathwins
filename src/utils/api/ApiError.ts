@@ -1,23 +1,25 @@
-interface ApiError {
+interface ApiErrorOptions {
   statusCode: number;
-  data: any;
   message: string;
-  success: boolean;
-  errors: any;
+  errors?: any;
+  stack?: string;
 }
 
 class ApiError extends Error {
-  constructor(
-    statusCode: number,
-    message: string = 'Something went wrong',
-    errors: any = [],
-    stack = ''
-  ) {
+  public statusCode: number;
+  public errors: unknown;
+  public message: string;
+
+  constructor({
+    statusCode = 500,
+    message = 'Internal server error',
+    errors = [],
+    stack = '',
+  }: ApiErrorOptions) {
     super(message);
-    this.statusCode = statusCode;
-    this.data = null;
+
     this.message = message;
-    this.success = false;
+    this.statusCode = statusCode;
     this.errors = errors;
 
     if (stack) {

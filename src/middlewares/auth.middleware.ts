@@ -8,10 +8,13 @@ export const verifyUser = async (
 ) => {
   try {
     console.log('hello');
-    const dummyUserId = 1234;
+    const dummyUserId = '1234';
     req.userId = dummyUserId;
     next();
-  } catch (err) {
-    throw new ApiError(500, 'Error verifying user', err);
+  } catch (err: unknown) {
+    throw new ApiError({
+      statusCode: 500,
+      message: 'Error verifying user',
+    });
   }
 };
