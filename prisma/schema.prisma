@@ -39,7 +39,11 @@ enum TransactionDescription {
   REFERAL_POINT
   REWARD_CLAIM
 }
-
+enum UserTournamentStatus {
+  NOT_OPENED
+  IN_PROGRESS
+  COMPLETED
+}
 enum TournamentStatus {
   OPEN
   CLOSED
@@ -87,13 +91,14 @@ model DailyTournament {
   id                String    @id @default(cuid())
   date              DateTime  @db.Date
   createdAt         DateTime  @default(now())
-  status            String    @default("OPEN") // "OPEN", "CLOSED", "FINALIZED"
+  status            TournamentStatus    @default(OPEN)
   configVersion     String?
   minute1           Json      @default("[]") // Array of {userId, score, timestamp}
   minute2           Json      @default("[]")
   minute3           Json      @default("[]")
   minute4           Json      @default("[]")
   final             Json      @default("[]")
+
   sessions          DailyTournamentSession[]
   
   @@index([date])
@@ -111,7 +116,7 @@ model DailyTournamentSession {
   sessionSeed       String    // For reproducible question generation
   startedAt         DateTime  @default(now())
   endedAt           DateTime?
-  status            String    @default("IN_PROGRESS") // "IN_PROGRESS", "COMPLETED", "ABANDONED"
+  status            UserTournamentStatus    @default(NOT_OPENED)
   currentScore      Int       @default(0)
   finalScore        Int?
   bestScore         Int       @default(0)
