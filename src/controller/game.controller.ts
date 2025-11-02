@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../prisma';
 import gameConfig from '../utils/game.config';
-import { createQuestions } from '../utils/tournament.utils';
+import { createQuestions } from '../utils/question.utils';
 
 export const addQuestion = async (req: Request, res: Response) => {
   try {

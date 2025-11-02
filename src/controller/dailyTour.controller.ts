@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createQuestions } from '../utils/tournament.utils';
+import { createQuestions } from '../utils/question.utils';
 import { ApiResponse } from '../utils/api/ApiResponse';
 import prisma from '../prisma';
 

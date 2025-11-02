@@ -7,7 +7,7 @@ function shuffle(array: any[]): any[] {
   }
   return array;
 }
-export const createQuestions = async (size: number) => {
+export const generateQuestions = async (size: number) => {
   try {
     const totalQuestions = size;
     const targetCounts = {

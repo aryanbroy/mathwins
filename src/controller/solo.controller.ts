@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../prisma';
-import { createQuestions } from '../utils/tournament.utils';
+import { createQuestions } from '../utils/question.utils';
 import gameConfig from '../utils/game.config';
 
 export const startSolo = async (req: Request, res: Response) => {
