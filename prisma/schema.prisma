@@ -17,6 +17,15 @@ enum Role {
   USER
   ADMIN
 }
+enum AvatarType {
+  DEFAULT
+  UPLOADED
+}
+enum Theme {
+  LIGHT
+  DARK
+  SYSTEM
+}
 
 enum TransactionType {
   INCREMENT
@@ -48,13 +57,13 @@ model User {
   deviceHash        String?   // For device-based merging
   username          String    @unique
   usernameReservedAt DateTime?
-  avatarType        String?   // "default" or "upload"
+  avatarType        AvatarType @default(DEFAULT)
   profilePictureUrl String?
   coins             Int       @default(0)
   lifetimeCoins     Int       @default(0)
   lifetimeCoinPoints Int      @default(0)
   level             Int       @default(1)
-  theme             String    @default("system") // "light", "dark", "system"
+  theme             Theme    @default(SYSTEM)
   soundEnabled      Boolean   @default(true)
   hapticsEnabled    Boolean   @default(true)
   language          String    @default("en")
@@ -63,7 +72,7 @@ model User {
   referredBy        User?     @relation("Referrals", fields: [referredById], references: [id])
   referrals         User[]    @relation("Referrals")
   referralRewarded  Boolean   @default(false)
-  role              Role      @default(USER) // "user", "admin"
+  role              Role      @default(USER)
 
   dailySessions     DailyTournamentSession[]
   soloSessions      soloSession[]
@@ -72,6 +81,60 @@ model User {
   @@index([phoneNumber])
   @@index([googleId])
   @@index([referralCode])
+}
+
+model DailyTournament {
+  id                String    @id @default(cuid())
+  date              DateTime  @db.Date
+  createdAt         DateTime  @default(now())
+  status            String    @default("OPEN") // "OPEN", "CLOSED", "FINALIZED"
+  configVersion     String?
+  minute1           Json      @default("[]") // Array of {userId, score, timestamp}
+  minute2           Json      @default("[]")
+  minute3           Json      @default("[]")
+  minute4           Json      @default("[]")
+  final             Json      @default("[]")
+  sessions          DailyTournamentSession[]
+  
+  @@index([date])
+  @@index([status])
+}
+
+model DailyTournamentSession {
+  id                String    @id @default(cuid())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tournamentId      String
+  tournament        DailyTournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  sessionSeed       String    // For reproducible question generation
+  startedAt         DateTime  @default(now())
+  endedAt           DateTime?
+  status            String    @default("IN_PROGRESS") // "IN_PROGRESS", "COMPLETED", "ABANDONED"
+  currentScore      Int       @default(0)
+  finalScore        Int?
+  bestScore         Int       @default(0)
+  minute1Score      Int?
+  minute2Score      Int?
+  minute3Score      Int?
+  minute4Score      Int?
+  attemptNumber     Int       @default(1)
+  isFreeAttempt     Boolean   @default(true)
+  isRewardedAttempt Boolean   @default(false)
+  currentLevel      Int       @default(1)
+  questionsAnswered Int       @default(0)
+  correctAnswers    Int       @default(0)
+
+  questions         QuestionAttempt[]
+  
+  @@index([userId, tournamentId])
+  @@index([userId])
+  @@index([tournamentId])
+}
+
+model soloSession {
+  id                String    @id @default(cuid())
 }
 
 model Question {
@@ -118,17 +181,6 @@ model SoloAttempt {
   questions   Question[]
   createdAt  DateTime @default(now())
   submitedAt DateTime
-
-  @@index([userId, createdAt])
-}
-
-model DailyTournamentAttempt {
-  id         Int       @id @default(autoincrement())
-  user       User      @relation(fields: [userId], references: [id])
-  userId     Int
-  score      BigInt    @default(0)
-  createdAt  DateTime  @default(now())
-  submitedAt DateTime?
 
   @@index([userId, createdAt])
 }
