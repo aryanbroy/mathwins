@@ -64,8 +64,6 @@ model User {
   referrals         User[]    @relation("Referrals")
   referralRewarded  Boolean   @default(false)
   role              Role      @default(USER) // "user", "admin"
-  isActive          Boolean   @default(true)
-  isBanned          Boolean   @default(false)
 
   dailySessions     DailyTournamentSession[]
   soloSessions      soloSession[]
