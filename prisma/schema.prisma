@@ -26,12 +26,15 @@ enum Theme {
   DARK
   SYSTEM
 }
+enum LifelineType {
+  FIFTY_FIFTY
+  ADD_THIRTY_SEC
 
+}
 enum TransactionType {
   INCREMENT
   DECREMENT
 }
-
 enum TransactionDescription {
   SINGLE_PLAYER
   DAILY_TOURNAMENT
@@ -45,6 +48,7 @@ enum UserTournamentStatus {
   COMPLETED
 }
 enum TournamentStatus {
+  NOT_OPENED
   OPEN
   CLOSED
   FULL
@@ -79,7 +83,7 @@ model User {
   role              Role      @default(USER)
 
   dailySessions     DailyTournamentSession[]
-  soloSessions      soloSession[]
+  soloSessions      SoloSession[]
   
   @@index([username])
   @@index([phoneNumber])
@@ -138,92 +142,51 @@ model DailyTournamentSession {
   @@index([tournamentId])
 }
 
-model soloSession {
+model SoloSession {
   id                String    @id @default(cuid())
-}
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date              DateTime  @db.Date
+  sessionSeed       String
+  startedAt         DateTime  @default(now())
+  endedAt           DateTime?
+  status            TournamentStatus    @default(NOT_OPENED)
+  currentRound      Int       @default(1)
+  bankedPoints      Float     @default(0)
+  finalScore        Float?
+  coinPointsEarned  Int       @default(0)
+  attemptNumber     Int
+  isFreeAttempt     Boolean   @default(true)
+  currentLevel      Int       @default(1)
+  questionsAnswered Int       @default(0)
+  correctAnswers    Int       @default(0)
+  madeMistake       Boolean   @default(false)
+  quitEarly         Boolean   @default(false)
 
-model Question {
-  id           Int            @id @default(autoincrement())
-  question     String
-  option       String[]
-  answer       Int
-  difficulty   Int
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  soloAttempts SoloAttempt[]
-}
-
-model Lifeline {
-  id            Int      @id @default(autoincrement())
-  user          User     @relation(fields: [userId], references: [id])
-  userId        Int      @unique
-  fiftyUses     Int      @default(1)
-  levelDownUses Int      @default(1)
-  extraTimeUses Int      @default(0)
-  lastReset     DateTime @default(now()) @db.Date
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-model Transaction {
-  id          Int                    @id @default(autoincrement())
-  user        User                   @relation(fields: [userId], references: [id])
-  userId      Int
-  amount      Int
-  type        TransactionType
-  description TransactionDescription
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
-
+  questions         QuestionAttempt[]
+  
+  @@index([userId, date])
   @@index([userId])
 }
 
-model SoloAttempt {
-  id         Int      @id @default(autoincrement())
-  user       User     @relation(fields: [userId], references: [id])
-  userId     Int
-  score      BigInt
-  questions   Question[]
-  createdAt  DateTime @default(now())
-  submitedAt DateTime
-
-  @@index([userId, createdAt])
-}
-
-model InstantTournamentSubmission {
-  id          Int      @id @default(autoincrement())
-  user        User     @relation(fields: [userId], references: [id])
-  userId      Int
-  score       BigInt
-  submittedAt DateTime @default(now())
-
-  @@index([userId, submittedAt])
-}
-
-model LiveDailyLeaderboard {
-  id            Int      @id @default(autoincrement())
-  user          User     @relation(fields: [userId], references: [id])
-  userId        Int      @unique
-  soloPoints    BigInt   @default(0)
-  dailyPoints   BigInt   @default(0)
-  instantPoints BigInt   @default(0)
-  totalPoints   BigInt   @default(0)
-  updatedAt     DateTime @updatedAt
-
-  @@index([totalPoints(sort: Desc)])
-}
-
-model DailyUserLeaderboardFinal {
-  id                  Int      @id @default(autoincrement())
-  user                User     @relation(fields: [userId], references: [id])
-  userId              Int
-  date                DateTime @db.Date
-  totalCoinPoints     BigInt   @default(0)
-  finalRank           Int
-  createdAt           DateTime @default(now())
-  coinPointsBreakdown Json?
-  // coinPointsBreakdown example: { "dailyPoints": 120, "instantPointsSum": 310, "soloPointsSum": 150 }
-
-  @@unique([userId, date])
-  @@index([date, finalRank(sort: Asc)])
+model QuestionAttempt {
+  id                String    @id @default(cuid())
+  createdAt         DateTime  @default(now())
+  questionIndex     Int       // Sequential index in session
+  level             Int
+  expression        String    // e.g., "123 + 456"
+  result            String    // Computed result as string
+  side              String    // "front" or "right"
+  kthDigit          Int       // Which digit to ask about
+  correctDigit      Int       // The correct answer (0-9) 
+  
+  dailySessionId    String?
+  dailySession      DailyTournamentSession? @relation(fields: [dailySessionId], references: [id], onDelete: Cascade)
+  soloSessionId     String?
+  soloSession         SoloSession? @relation(fields: [soloSessionId], references: [id], onDelete: Cascade)
+  
+  @@index([dailySessionId])
+  @@index([soloSessionId])
 }
