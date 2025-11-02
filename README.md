@@ -1,2 +1,1 @@
-niga1 := Aryan
-niga2 := Swayanshu004
+mathwins_server_repo
