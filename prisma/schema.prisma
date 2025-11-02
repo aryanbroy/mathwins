@@ -29,7 +29,6 @@ enum Theme {
 enum LifelineType {
   FIFTY_FIFTY
   ADD_THIRTY_SEC
-
 }
 enum TransactionType {
   INCREMENT
