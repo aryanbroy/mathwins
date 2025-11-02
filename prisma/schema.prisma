@@ -39,28 +39,41 @@ enum TournamentStatus {
 }
 
 model User {
-  id                           Int                           @id @default(autoincrement())
-  name                         String
-  username                     String                        @unique
-  email                        String?
-  phone                        String?                       @unique
-  password                     String
-  googleId                     String?                       @unique
-  role                         Role                          @default(USER)
-  avatarUrl                    String?
-  points                       BigInt                        @default(0)
-  lifeTimePoints               BigInt                        @default(0)
-  bestScore                    BigInt                        @default(0)
-  level                        Int                           @default(1)
-  lifeline                     Lifeline?
-  createdAt                    DateTime                      @default(now())
-  updatedAt                    DateTime                      @updatedAt
-  transactions                 Transaction[]
-  historicalLeaderboards       DailyUserLeaderboardFinal[]
-  soloAttempts                 SoloAttempt[]
-  dailyTournamentAttempts      DailyTournamentAttempt[]
-  instantTournamentSubmissions InstantTournamentSubmission[]
-  liveDailyLeaderboard         LiveDailyLeaderboard?
+  id                String    @id @default(cuid())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  phoneNumber       String?   @unique
+  googleId          String?   @unique
+  email             String?   @unique
+  deviceHash        String?   // For device-based merging
+  username          String    @unique
+  usernameReservedAt DateTime?
+  avatarType        String?   // "default" or "upload"
+  profilePictureUrl String?
+  coins             Int       @default(0)
+  lifetimeCoins     Int       @default(0)
+  lifetimeCoinPoints Int      @default(0)
+  level             Int       @default(1)
+  theme             String    @default("system") // "light", "dark", "system"
+  soundEnabled      Boolean   @default(true)
+  hapticsEnabled    Boolean   @default(true)
+  language          String    @default("en")
+  referralCode      String?   @unique
+  referredById      String?
+  referredBy        User?     @relation("Referrals", fields: [referredById], references: [id])
+  referrals         User[]    @relation("Referrals")
+  referralRewarded  Boolean   @default(false)
+  role              Role      @default(USER) // "user", "admin"
+  isActive          Boolean   @default(true)
+  isBanned          Boolean   @default(false)
+
+  dailySessions     DailyTournamentSession[]
+  soloSessions      soloSession[]
+  
+  @@index([username])
+  @@index([phoneNumber])
+  @@index([googleId])
+  @@index([referralCode])
 }
 
 model Question {
