@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import { createQuestions } from '../utils/question.utils';
 import { ApiResponse } from '../utils/api/ApiResponse';
 import prisma from '../prisma';
+import { asyncHandler } from '../middlewares/asyncHandler';
+import { log } from 'console';
 
 export const fetchDailyTournament = async (req: Request, res: Response) => {
   try {
@@ -20,9 +21,6 @@ export const fetchDailyTournament = async (req: Request, res: Response) => {
 
 export const createDailyTournament = async (req: Request, res: Response) => {
   try {
-    const numOfQuestions = 5;
-    const questions = await createQuestions(numOfQuestions);
-
     const userId = req.userId;
     if (!userId) {
       res.status(400).json(new ApiResponse(400, [], 'Invalid user id'));
@@ -37,12 +35,14 @@ export const createDailyTournament = async (req: Request, res: Response) => {
       res.status(400).json(new ApiResponse(400, [], 'No such user exists'));
     }
 
-    const { score } = req.body;
+    const today = new Date();
+    const tournamentStartDate = new Date(
+      Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+    );
 
-    const dailyTournamentAttempt = await prisma.dailyTournamentAttempt.create({
+    const dailyTournamentAttempt = await prisma.dailyTournament.create({
       data: {
-        userId: userId,
-        score,
+        date: tournamentStartDate,
       },
     });
     res.status(201).json(
@@ -50,7 +50,6 @@ export const createDailyTournament = async (req: Request, res: Response) => {
         201,
         {
           dailyTournamentAttempt,
-          questions,
         },
         'Created daily tournament successfuly'
       )

@@ -9,6 +9,5 @@ const router = Router();
 
 router.post('/start', fetchDailyTournament);
 router.post('/create', verifyUser, createDailyTournament);
-// router.post('/submit_final', timeCheck.middleware, submitDailyTournament)
 
 export default router;
