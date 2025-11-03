@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { ApiResponse } from '../utils/api/ApiResponse';
 import prisma from '../prisma';
 import { asyncHandler } from '../middlewares/asyncHandler';
-import { log } from 'console';
+import { ApiError } from '../utils/api/ApiError';
+import { generateSessionSeed } from '../utils/seed.util';
 
 export const fetchDailyTournament = async (req: Request, res: Response) => {
   try {
@@ -19,20 +20,14 @@ export const fetchDailyTournament = async (req: Request, res: Response) => {
 // includes: userid, createdAt, score = 0
 // return created questions without answers
 
-export const createDailyTournament = async (req: Request, res: Response) => {
-  try {
+export const createDailyTournament = asyncHandler(
+  async (req: Request, res: Response) => {
     const userId = req.userId;
     if (!userId) {
-      res.status(400).json(new ApiResponse(400, [], 'Invalid user id'));
-    }
-    const user = await prisma.user.findFirst({
-      where: {
-        id: userId,
-      },
-    });
-
-    if (!user) {
-      res.status(400).json(new ApiResponse(400, [], 'No such user exists'));
+      throw new ApiError({
+        statusCode: 400,
+        message: 'Received invalid user id from auth handler',
+      });
     }
 
     const today = new Date();
@@ -54,11 +49,54 @@ export const createDailyTournament = async (req: Request, res: Response) => {
         'Created daily tournament successfuly'
       )
     );
-  } catch (err) {
-    res.status(500).json(err);
   }
-};
+);
 
+export const createDailyTournamentSession = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.userId;
+    if (!userId) {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'Received invalid user id from auth handler',
+      });
+    }
+
+    const today = new Date();
+    const tournamentStartDate = new Date(
+      Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+    );
+
+    let dailyTournament = await prisma.dailyTournament.findFirst({
+      where: {
+        date: tournamentStartDate,
+      },
+    });
+
+    if (!dailyTournament) {
+      console.log('no current tournament exists, creating one');
+      dailyTournament = await prisma.dailyTournament.create({
+        data: {
+          date: tournamentStartDate,
+        },
+      });
+    }
+
+    const sessionSeed = generateSessionSeed();
+
+    const session = await prisma.dailyTournamentSession.create({
+      data: {
+        userId: userId,
+        tournamentId: dailyTournament.id,
+        sessionSeed: sessionSeed,
+      },
+    });
+
+    res
+      .status(201)
+      .json(new ApiResponse(201, session, 'Create daily tournament session'));
+  }
+);
 // export const submitDailyTournament = async () => {
 // check middleware for validation
 // fetch answer array from req.body
