@@ -1,11 +1,25 @@
 import { Request, Response } from 'express';
 import prisma from '../prisma';
-import { createQuestions } from '../utils/question.utils';
 import gameConfig from '../utils/game.config';
+import { ApiResponse } from '../utils/api/ApiResponse';
+import { generateQuestion } from '../utils/question.utils';
+import { generateSeed } from '../utils/seed.utils';
+import { ApiError } from '../utils/api/ApiError';
+
+type QuestionData = {
+  id: string;
+  expression: string;
+  result: string;
+  side: string;
+  kthDigit: number;
+  correctDigit: number;
+  level: number;
+};
 
 export const startSolo = async (req: Request, res: Response) => {
     // check attempt available for this user or not
     // create question-set
+    // Remove answer (correctDigit)
     // send Qs-set to Frontend
     // 
     
@@ -15,47 +29,64 @@ export const startSolo = async (req: Request, res: Response) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const attemptsCount = await prisma.soloAttempt.count({
+    const attemptsCount = await prisma.soloSession.count({
       where: {
         userId: userId,
-        createdAt: {
+        date: {
           gte: today,
         },
       },
     });
     if (attemptsCount >= freeAttemptsAllowed) {
-      res.status(501).send("No Free Attempt Available for Today");
+      res
+        .status(501)
+        .send(new ApiResponse(501, 'No Free Attempt Available for Today'));
     }
     const attemptsLeft = freeAttemptsAllowed - attemptsCount;
-    const questions = await createQuestions(5); 
-    if (!questions || questions.length !== totalQuestionsInRun) {
-      res.status(501).send("Could not generate a full set of ${totalQuestionsInRun} questions. Please try again.");
+    let questions: QuestionData[] = [];
+    try {
+      // 2. Use 'await' directly. It's cleaner than mixing 'await' and '.then()'.
+      questions = await generateQuestion(5);
+
+    } catch (err) {
+      // Handle your error
+      throw new ApiError({statusCode: 501, message: 'Failed to generate questions'});
     }
-    
-      const newAttempt = await prisma.soloAttempt.create({
-        data: {
-          userId: userId,
-          score: 0,
-          submitedAt: new Date(),
-          question: {
-            create: questions.map((q) => ({
-              question: q.question,
-              option: q.option,
-              answer: q.answer,
-              difficulty: q.difficulty,
-            })),
-          },
-        },
-      });
+    // await generateQuestion(5)
+    //   .then((value)=>{
+    //     console.log(value);
+    //     questions = value;
+    //   }, () => new ApiError({statusCode: 501,message: 'Username already exists'})); 
+    // --------------------------------------
+    if (!questions || questions.length !== totalQuestionsInRun) {
+      res
+        .status(501)
+        .send(new ApiResponse(501, `Could not generate a full set of ${totalQuestionsInRun} questions. Please try again.`));
+    }
+    const seed = generateSeed();
+    const newAttempt = await prisma.soloSession.create({
+      data: {
+        userId: userId,
+        date: today,
+        sessionSeed: seed,
+        attemptNumber: attemptsCount+1,  
+        questions: {
+          create: questions.map((q, index) => ({
+              questionIndex: index,
+              level: q.level,
+              expression: q.expression,
+              result: q.result,
+              side: q.side,
+              kthDigit: q.kthDigit,
+              correctDigit: q.correctDigit
+          })),
+        },    
+      },
+    });
     const sanitizedQuestions = questions.map((q) => {
-      const { answer, ...clientSafeQuestion } = q;
+      const { correctDigit, ...clientSafeQuestion } = q;
       return clientSafeQuestion;
     });
 
-    return res.status(201).json({
-      message: 'Solo run started. Good luck!',
-      attemptId: newAttempt.id,
-      questions: sanitizedQuestions,
-      attemptsLeft: attemptsLeft - 1,
-    });
+    return res.status(201).json({sanitizedQuestions});
 }
