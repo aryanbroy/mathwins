@@ -1,3 +1,7 @@
+import crypto from 'crypto';
+
 export const generateSeed = (): string => {
-  return Math.random().toString(36).substring(2, 10);
+  const seed = crypto.randomBytes(16).toString('hex');
+  return seed;
 };
+

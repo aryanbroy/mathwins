@@ -3,9 +3,9 @@ import { ApiResponse } from '../utils/api/ApiResponse';
 import prisma from '../prisma';
 import { asyncHandler } from '../middlewares/asyncHandler';
 import { ApiError } from '../utils/api/ApiError';
-import { generateSessionSeed } from '../utils/seed.util';
-import { throwDeprecation } from 'process';
-import { calculateScore } from '../utils/score.util';
+import { generateSeed } from '../utils/seed.utils';
+import { calculateScore } from '../utils/score.utils';
+import { UserTournamentStatus } from '../generated/prisma';
 
 export const fetchDailyTournament = async (req: Request, res: Response) => {
   try {
@@ -16,11 +16,6 @@ export const fetchDailyTournament = async (req: Request, res: Response) => {
     res.status(500).json(err);
   }
 };
-
-// create x no. of questions
-// create new DailyTournamentAttempt table
-// includes: userid, createdAt, score = 0
-// return created questions without answers
 
 export const createDailyTournament = asyncHandler(
   async (req: Request, res: Response) => {
@@ -42,15 +37,16 @@ export const createDailyTournament = asyncHandler(
         date: tournamentStartDate,
       },
     });
-    res.status(201).json(
-      new ApiResponse(
-        201,
-        {
+
+    res
+      .status(201)
+      .json(
+        new ApiResponse(
+          201,
           dailyTournamentAttempt,
-        },
-        'Created daily tournament successfuly'
-      )
-    );
+          'Created daily tournament successfuly'
+        )
+      );
   }
 );
 
@@ -64,39 +60,49 @@ export const createDailyTournamentSession = asyncHandler(
       });
     }
 
+    // pending (later)
     const today = new Date();
     const tournamentStartDate = new Date(
       Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
     );
 
-    let dailyTournament = await prisma.dailyTournament.findFirst({
-      where: {
-        date: tournamentStartDate,
-      },
-    });
+    const sessionSeed = generateSeed();
 
-    if (!dailyTournament) {
-      console.log('no current tournament exists, creating one');
-      dailyTournament = await prisma.dailyTournament.create({
-        data: {
+    const result = await prisma.$transaction(async (tx) => {
+      const dailyTournament = await tx.dailyTournament.upsert({
+        where: {
           date: tournamentStartDate,
         },
+        update: {},
+        create: { date: tournamentStartDate },
       });
-    }
 
-    const sessionSeed = generateSessionSeed();
+      await tx.user.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          dailyAttemptCount: {
+            increment: 1,
+          },
+        },
+      });
 
-    const session = await prisma.dailyTournamentSession.create({
-      data: {
-        userId: userId,
-        tournamentId: dailyTournament.id,
-        sessionSeed: sessionSeed,
-      },
+      const session = await prisma.dailyTournamentSession.create({
+        data: {
+          userId: userId,
+          tournamentId: dailyTournament.id,
+          sessionSeed: sessionSeed,
+        },
+      });
+      return { dailyTournament, session };
     });
 
     res
       .status(201)
-      .json(new ApiResponse(201, session, 'Create daily tournament session'));
+      .json(
+        new ApiResponse(201, result.session, 'Create daily tournament session')
+      );
   }
 );
 
@@ -139,8 +145,17 @@ export const updateSessionScore = asyncHandler(
 
     if (question.result != answer) {
       // dont update the score here (fix this later)
-      console.log(question.result, answer);
-      res.status(200).json({ success: true, answer: 'wrong' });
+      await prisma.dailyTournamentSession.update({
+        where: {
+          id: dailyTournamentSessionId,
+        },
+        data: {
+          questionsAnswered: {
+            increment: 1,
+          },
+        },
+      });
+      return res.status(200).json({ success: true, answer: 'wrong' });
     }
 
     const incrementalScore = calculateScore(question.level, timeTaken);
@@ -153,20 +168,18 @@ export const updateSessionScore = asyncHandler(
         currentScore: {
           increment: incrementalScore,
         },
+        questionsAnswered: {
+          increment: 1,
+        },
+        correctAnswers: {
+          increment: 1,
+        },
       },
     });
     res.status(202).json(new ApiResponse(202, updatedSession, 'Updated score'));
   }
 );
 
-// check middleware for validation
-// fetch answer array from req.body
-// calculate time difference between createdAt and submitedAt (not needed)
-// calculate score (compare answers)
-// update DailyTournamentAttempt table - add score and submitedAt
-// return score and success
-
-// pending
 export const finalSessionSubmission = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.userId;
@@ -177,14 +190,43 @@ export const finalSessionSubmission = asyncHandler(
       });
     }
 
-    const { finalScore } = req.body;
-    if (!finalScore) {
+    const { sessionId, finalScore, endedAt } = req.body; // sessionId can be later extracted from cookies
+
+    if (!finalScore || !sessionId || endedAt) {
       throw new ApiError({
         statusCode: 400,
-        message: 'Received empty fields: finalScore',
+        message: 'Received empty fields: finalScore, sessionId, endedAt',
       });
     }
 
-    res.status(200).json({ success: true });
+    const session = await prisma.dailyTournamentSession.findFirst({
+      where: {
+        id: sessionId,
+      },
+    });
+    if (!session) {
+      throw new ApiError({ statusCode: 400, message: 'Invalid session id' });
+    }
+
+    const currentBestScore = session.bestScore;
+
+    const updatedSession = await prisma.dailyTournamentSession.update({
+      where: {
+        id: sessionId,
+      },
+      data: {
+        endedAt,
+        status: UserTournamentStatus.COMPLETED,
+        finalScore,
+        bestScore:
+          finalScore > currentBestScore ? finalScore : currentBestScore,
+      },
+    });
+
+    res
+      .status(202)
+      .json(
+        new ApiResponse(202, updatedSession, 'Successful final submission')
+      );
   }
 );
