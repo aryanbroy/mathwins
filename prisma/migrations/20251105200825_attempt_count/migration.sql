@@ -8,7 +8,7 @@ CREATE TYPE "AvatarType" AS ENUM ('DEFAULT', 'UPLOADED');
 CREATE TYPE "Theme" AS ENUM ('LIGHT', 'DARK', 'SYSTEM');
 
 -- CreateEnum
-CREATE TYPE "LifelineType" AS ENUM ('FIFTY_FIFTY', 'ADD_THIRTY_SEC');
+CREATE TYPE "LifelineType" AS ENUM ('FIFTY_FIFTY', 'ADD_THIRTY_SEC', 'LEVEL_DOWN');
 
 -- CreateEnum
 CREATE TYPE "TransactionType" AS ENUM ('INCREMENT', 'DECREMENT');
@@ -47,6 +47,9 @@ CREATE TABLE "User" (
     "referredById" TEXT,
     "referralRewarded" BOOLEAN NOT NULL DEFAULT false,
     "role" "Role" NOT NULL DEFAULT 'USER',
+    "soloAttemptCount" INTEGER NOT NULL DEFAULT 0,
+    "instantAttemptCount" INTEGER NOT NULL DEFAULT 0,
+    "dailyAttemptCount" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -85,7 +88,6 @@ CREATE TABLE "DailyTournamentSession" (
     "minute2Score" INTEGER,
     "minute3Score" INTEGER,
     "minute4Score" INTEGER,
-    "attemptNumber" INTEGER NOT NULL DEFAULT 1,
     "isFreeAttempt" BOOLEAN NOT NULL DEFAULT true,
     "isRewardedAttempt" BOOLEAN NOT NULL DEFAULT false,
     "currentLevel" INTEGER NOT NULL DEFAULT 1,
@@ -125,7 +127,7 @@ CREATE TABLE "SoloSession" (
 CREATE TABLE "QuestionAttempt" (
     "id" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "questionIndex" INTEGER NOT NULL,
+    "questionIndex" SERIAL NOT NULL,
     "level" INTEGER NOT NULL,
     "expression" TEXT NOT NULL,
     "result" TEXT NOT NULL,
@@ -164,6 +166,9 @@ CREATE INDEX "User_googleId_idx" ON "User"("googleId");
 
 -- CreateIndex
 CREATE INDEX "User_referralCode_idx" ON "User"("referralCode");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "DailyTournament_date_key" ON "DailyTournament"("date");
 
 -- CreateIndex
 CREATE INDEX "DailyTournament_date_idx" ON "DailyTournament"("date");

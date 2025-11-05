@@ -149,6 +149,7 @@ model DailyTournamentSession {
   @@index([userId, tournamentId])
   @@index([userId])
   @@index([tournamentId])
+  @@map("DailyTournamentSession")
 }
 
 model SoloSession {
