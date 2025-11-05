@@ -76,3 +76,29 @@ export const startSolo = async (req: Request, res: Response) => {
 
     return res.status(201).json({sanitizedQuestions, newAttempt});
 }
+
+export const continueSolo = async (req: Request, res: Response) => {
+  const {soloId} = req.body;
+  const soloSession = await prisma.soloSession.findFirst({
+    where: {
+      id: soloId,
+    }
+  });
+
+}
+
+export const quitSolo  = async (req: Request, res: Response) => {
+  
+}
+
+export const nextQuestion  = async (req: Request, res: Response) => {
+
+}
+
+export const completeSolo  = async (req: Request, res: Response) => {
+
+}
+
+export const minuiteLeaderboard  = async (req: Request, res: Response) => {
+
+}
