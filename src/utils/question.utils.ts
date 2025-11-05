@@ -138,7 +138,6 @@ export const generateQuestion = async (level: number,seed?: number,config: Level
     throw new Error('Failed to generate question');
   }
 };
-
 function generateQuestionAttempt(
   level: number,
   targetDigits: number,
@@ -278,3 +277,24 @@ function generateFallbackQuestion(
     level,
   };
 }
+export const generateQuestions = async (
+  level: number,
+  count: number = 1,
+  baseSeed?: number
+): Promise<GeneratedQuestion[]> => {
+  const questions: GeneratedQuestion[] = [];
+  const seed = baseSeed || Date.now();
+  
+  for (let i = 0; i < count; i++) {
+    const question = await generateQuestion(level, seed + i * 1000);
+    questions.push(question);
+  }
+  
+  return questions;
+};
+export const validateAnswer = (
+  question: GeneratedQuestion,
+  userAnswer: number
+): boolean => {
+  return question.correctDigit === userAnswer;
+};

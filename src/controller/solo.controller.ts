@@ -2,12 +2,11 @@ import { Request, Response } from 'express';
 import prisma from '../prisma';
 import gameConfig from '../utils/game.config';
 import { ApiResponse } from '../utils/api/ApiResponse';
-import { generateQuestion } from '../utils/question.utils';
+import { generateQuestion, generateQuestions } from '../utils/question.utils';
 import { generateSeed } from '../utils/seed.utils';
 import { ApiError } from '../utils/api/ApiError';
 
 type QuestionData = {
-  id: string;
   expression: string;
   result: string;
   side: string;
@@ -43,43 +42,33 @@ export const startSolo = async (req: Request, res: Response) => {
         .send(new ApiResponse(501, 'No Free Attempt Available for Today'));
     }
     const attemptsLeft = freeAttemptsAllowed - attemptsCount;
-    let questions: QuestionData[] = [];
-    try {
-      questions = await generateQuestion(5);
+    let questions: QuestionData[];
+    questions = await generateQuestions(1,5);
 
-    } catch (err) {
-      throw new ApiError({statusCode: 501, message: 'Failed to generate questions'});
-    }
-    await generateQuestion(5)
-      .then((value)=>{
-        console.log(value);
-        questions = value;
-      }, () => new ApiError({statusCode: 501,message: 'Username already exists'}));
-    if (!questions || questions.length !== totalQuestionsInRun) {
-      res
-        .status(501)
-        .send(new ApiResponse(501, `Could not generate a full set of ${totalQuestionsInRun} questions. Please try again.`));
-    }
+    // } catch (err) {
+    //   throw new ApiError({statusCode: 501, message: 'Failed to generate questions'});
+    // }
     const seed = generateSeed();
     const newAttempt = await prisma.soloSession.create({
       data: {
         userId: userId,
         date: today,
         sessionSeed: seed,
-        attemptNumber: attemptsCount+1,  
+        attemptNumber: attemptsCount+1,
         questions: {
-          create: questions.map((q, index) => ({
-              questionIndex: index,
-              level: q.level,
-              expression: q.expression,
-              result: q.result,
-              side: q.side,
-              kthDigit: q.kthDigit,
-              correctDigit: q.correctDigit
-          })),
-        },    
+        create: questions.map((q, index) => ({
+          questionIndex: index + 1,
+          level: q.level,
+          expression: q.expression,
+          result: q.result,
+          side: q.side,
+          kthDigit: q.kthDigit,
+          correctDigit: q.correctDigit,
+        })),
       },
+    },
     });
+
     const sanitizedQuestions = questions.map((q) => {
       const { correctDigit, ...clientSafeQuestion } = q;
       return clientSafeQuestion;
