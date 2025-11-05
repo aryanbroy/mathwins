@@ -11,6 +11,13 @@ export const getAllUsers = async (req: Request, res: Response) => {
 export const createUser = asyncHandler(async (req: Request, res: Response) => {
   const { username, email } = req.body;
 
+  if (!username || !email) {
+    throw new ApiError({
+      statusCode: 400,
+      message: 'Received empty fields: username or email',
+    });
+  }
+
   const usernameExists = await prisma.user.findFirst({
     where: {
       username: username,
