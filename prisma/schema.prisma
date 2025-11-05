@@ -173,7 +173,7 @@ model SoloSession {
 model QuestionAttempt {
   id                String    @id @default(cuid())
   createdAt         DateTime  @default(now())
-  questionIndex     Int       // Sequential index in session
+  questionIndex     Int       @default(autoincrement())
   level             Int
   expression        String    // e.g., "123 + 456"
   result            String    // Computed result as string

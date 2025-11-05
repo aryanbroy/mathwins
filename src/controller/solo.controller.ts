@@ -45,19 +45,16 @@ export const startSolo = async (req: Request, res: Response) => {
     const attemptsLeft = freeAttemptsAllowed - attemptsCount;
     let questions: QuestionData[] = [];
     try {
-      // 2. Use 'await' directly. It's cleaner than mixing 'await' and '.then()'.
       questions = await generateQuestion(5);
 
     } catch (err) {
-      // Handle your error
       throw new ApiError({statusCode: 501, message: 'Failed to generate questions'});
     }
-    // await generateQuestion(5)
-    //   .then((value)=>{
-    //     console.log(value);
-    //     questions = value;
-    //   }, () => new ApiError({statusCode: 501,message: 'Username already exists'})); 
-    // --------------------------------------
+    await generateQuestion(5)
+      .then((value)=>{
+        console.log(value);
+        questions = value;
+      }, () => new ApiError({statusCode: 501,message: 'Username already exists'}));
     if (!questions || questions.length !== totalQuestionsInRun) {
       res
         .status(501)
@@ -88,5 +85,5 @@ export const startSolo = async (req: Request, res: Response) => {
       return clientSafeQuestion;
     });
 
-    return res.status(201).json({sanitizedQuestions});
+    return res.status(201).json({sanitizedQuestions, newAttempt});
 }
