@@ -162,12 +162,11 @@ model SoloSession {
   sessionSeed       String
   startedAt         DateTime         @default(now())
   endedAt           DateTime?
-  status            TournamentStatus @default(NOT_OPENED)
+  status            UserTournamentStatus @default(NOT_OPENED)
   currentRound      Int              @default(1)
   bankedPoints      Float            @default(0)
   finalScore        Float?
   coinPointsEarned  Int              @default(0)
-  attemptNumber     Int
   isFreeAttempt     Boolean          @default(true)
   currentLevel      Int              @default(1)
   questionsAnswered Int              @default(0)
