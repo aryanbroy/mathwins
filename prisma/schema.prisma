@@ -153,26 +153,26 @@ model DailyTournamentSession {
 }
 
 model SoloSession {
-  id                String           @id @default(cuid())
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  id                String               @id @default(cuid())
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
   userId            String
-  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date              DateTime         @db.Date
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date              DateTime             @db.Date
   sessionSeed       String
-  startedAt         DateTime         @default(now())
+  startedAt         DateTime             @default(now())
   endedAt           DateTime?
   status            UserTournamentStatus @default(NOT_OPENED)
-  currentRound      Int              @default(1)
-  bankedPoints      Float            @default(0)
+  currentRound      Int                  @default(1)
+  bankedPoints      Float                @default(0)
   finalScore        Float?
-  coinPointsEarned  Int              @default(0)
-  isFreeAttempt     Boolean          @default(true)
-  currentLevel      Int              @default(1)
-  questionsAnswered Int              @default(0)
-  correctAnswers    Int              @default(0)
-  madeMistake       Boolean          @default(false)
-  quitEarly         Boolean          @default(false)
+  coinPointsEarned  Int                  @default(0)
+  isFreeAttempt     Boolean              @default(true)
+  currentLevel      Int                  @default(1)
+  questionsAnswered Int                  @default(0)
+  correctAnswers    Int                  @default(0)
+  madeMistake       Boolean              @default(false)
+  quitEarly         Boolean              @default(false)
 
   questions QuestionAttempt[]
 

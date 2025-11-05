@@ -88,7 +88,7 @@ export const createDailyTournamentSession = asyncHandler(
         },
       });
 
-      const session = await prisma.dailyTournamentSession.create({
+      const session = await tx.dailyTournamentSession.create({
         data: {
           userId: userId,
           tournamentId: dailyTournament.id,
