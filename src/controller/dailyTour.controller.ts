@@ -4,7 +4,7 @@ import prisma from '../prisma';
 import { asyncHandler } from '../middlewares/asyncHandler';
 import { ApiError } from '../utils/api/ApiError';
 import { generateSeed } from '../utils/seed.utils';
-import { calculateScore } from '../utils/score.utils';
+import { calculateDailyScore } from '../utils/score.utils';
 import { UserTournamentStatus } from '../generated/prisma';
 
 export const fetchDailyTournament = async (req: Request, res: Response) => {
@@ -158,7 +158,7 @@ export const updateSessionScore = asyncHandler(
       return res.status(200).json({ success: true, answer: 'wrong' });
     }
 
-    const incrementalScore = calculateScore(question.level, timeTaken);
+    const incrementalScore = calculateDailyScore(question.level, timeTaken);
 
     const updatedSession = await prisma.dailyTournamentSession.update({
       where: {

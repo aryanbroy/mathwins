@@ -1,11 +1,8 @@
 import { Router } from 'express';
-import { addQuestion, Leaderboard, getGameConfig, createSet } from '../controller/game.controller';
+import { demoQuestion } from '../controller/game.controller';
 
 const router = Router();
 
-router.post('/addQuestion', addQuestion);
-router.post('/Leaderboard', Leaderboard);
-router.get('/getGameConfig', getGameConfig);
-router.get('/checkSet', createSet);
+router.post('/addquestion', demoQuestion);
 
 export default router;

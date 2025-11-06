@@ -29,12 +29,6 @@ enum Theme {
   SYSTEM
 }
 
-enum LifelineType {
-  FIFTY_FIFTY
-  ADD_THIRTY_SEC
-  LEVEL_DOWN
-}
-
 enum TransactionType {
   INCREMENT
   DECREMENT
@@ -69,7 +63,7 @@ model User {
   phoneNumber         String?    @unique
   googleId            String?    @unique
   email               String?    @unique
-  deviceHash          String? // For device-based merging
+  deviceHash          String?    // For device-based merging
   username            String     @unique
   usernameReservedAt  DateTime?
   avatarType          AvatarType @default(DEFAULT)

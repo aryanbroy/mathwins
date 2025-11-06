@@ -8,9 +8,6 @@ CREATE TYPE "AvatarType" AS ENUM ('DEFAULT', 'UPLOADED');
 CREATE TYPE "Theme" AS ENUM ('LIGHT', 'DARK', 'SYSTEM');
 
 -- CreateEnum
-CREATE TYPE "LifelineType" AS ENUM ('FIFTY_FIFTY', 'ADD_THIRTY_SEC', 'LEVEL_DOWN');
-
--- CreateEnum
 CREATE TYPE "TransactionType" AS ENUM ('INCREMENT', 'DECREMENT');
 
 -- CreateEnum
@@ -107,12 +104,11 @@ CREATE TABLE "SoloSession" (
     "sessionSeed" TEXT NOT NULL,
     "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "endedAt" TIMESTAMP(3),
-    "status" "TournamentStatus" NOT NULL DEFAULT 'NOT_OPENED',
+    "status" "UserTournamentStatus" NOT NULL DEFAULT 'NOT_OPENED',
     "currentRound" INTEGER NOT NULL DEFAULT 1,
     "bankedPoints" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "finalScore" DOUBLE PRECISION,
     "coinPointsEarned" INTEGER NOT NULL DEFAULT 0,
-    "attemptNumber" INTEGER NOT NULL,
     "isFreeAttempt" BOOLEAN NOT NULL DEFAULT true,
     "currentLevel" INTEGER NOT NULL DEFAULT 1,
     "questionsAnswered" INTEGER NOT NULL DEFAULT 0,
