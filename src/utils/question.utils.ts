@@ -95,7 +95,6 @@ class SeededRandom {
 
 export const generateQuestion = async (level: number,seed?: number,config: LevelingConfig = DEFAULT_CONFIG): Promise<GeneratedQuestion> => {
   try {
-    console.log("try");
     //select level
     // generate seed
     // get config for selected level

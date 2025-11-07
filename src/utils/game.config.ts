@@ -20,6 +20,7 @@ const gameConfig = {
       round_size: 5,
       point_for_correct_answer: 1,
       level_increase_every_n_questions: 2,
+      free_round: 3,
       daily_free_attempts: 10,
     },
 

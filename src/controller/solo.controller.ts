@@ -57,19 +57,19 @@ export const startSolo = async (req: Request, res: Response) => {
           sessionSeed: seed,
           status: 'IN_PROGRESS',
           questions: {
-          create: {
-            level: question.level,
-            expression: question.expression,
-            result: question.result,
-            side: question.side,
-            kthDigit: question.kthDigit,
-            correctDigit: question.correctDigit,
+            create: {
+              level: question.level,
+              expression: question.expression,
+              result: question.result,
+              side: question.side,
+              kthDigit: question.kthDigit,
+              correctDigit: question.correctDigit,
+            },
           },
         },
-      },
       });
   
-      const { correctDigit, ...clientSafeQuestion } = question;
+      const { correctDigit, result, ...clientSafeQuestion } = question;
       const sanitizedQuestion = clientSafeQuestion;
   
       return res.status(201).json({sanitizedQuestion, newAttempt});
@@ -134,37 +134,35 @@ export const continueSolo = async (req: Request, res: Response) => {
     let newLevel = currentLevel + Math.floor(roundsCompleted / levelIncrementEvery) + 1;
     newLevel = newLevel < 5 ? newLevel : 5; 
     
-    const questions = await generateQuestions(newLevel, roundSize);
-    await prisma.questionAttempt.createMany({
-      data: questions.map((q, index) => ({
-        dailySessionId: null,
-        soloSessionId: soloId,
-        questionIndex: session.questions.length + index + 1,
-        level: q.level,
-        expression: q.expression,
-        result: q.result,
-        side: q.side,
-        kthDigit: q.kthDigit,
-        correctDigit: q.correctDigit,
-      })),
-    });
+    const question = await generateQuestion(newLevel);
     const updatedSession = await prisma.soloSession.update({
       where: { id: soloId },
       data: {
         bankedPoints: {
           increment: session.currentRound * 0.03,
         },
+        questions: {
+          create: {
+            level: question.level,
+            expression: question.expression,
+            result: question.result,
+            side: question.side,
+            kthDigit: question.kthDigit,
+            correctDigit: question.correctDigit,
+          },
+        },
         currentRound: session.currentRound + 1,
         currentLevel: newLevel,
         updatedAt: new Date(),
       },
     });
-    const sanitizedQuestions = questions.map(({ correctDigit, ...rest }) => rest);
+    const { correctDigit, result, ...clientSafeQuestion } = question;
+    const sanitizedQuestion = clientSafeQuestion;
     return res.status(200).json({
       message: 'Next round started successfully',
       round: updatedSession.currentRound,
       level: updatedSession.currentLevel,
-      questions: sanitizedQuestions,
+      questions: sanitizedQuestion,
     });
   } catch (error) {
     console.error('continueSolo error:', error);
@@ -176,7 +174,7 @@ export const continueSolo = async (req: Request, res: Response) => {
 
 export const quitSolo  = async (req: Request, res: Response) => {
   try {
-    const {soloSessionId, userId} = req.body();
+    const {soloSessionId, userId} = req.body;
     if(!soloSessionId || !userId){
       throw new ApiError({
           statusCode: 400,
@@ -218,7 +216,7 @@ export const quitSolo  = async (req: Request, res: Response) => {
   
     // - Calculate final score (no penalty for quitting after round)
     // - finalScore = session.bankedPoints
-    const roundsCompleted = session.questionsAnswered % gameConfig.single_player.round_size;
+    const roundsCompleted = session.questionsAnswered / gameConfig.single_player.round_size;
     const finalPoint = session.bankedPoints + (roundsCompleted * 0.03);
 
     const updatedSoloSession = await prisma.soloSession.update({
@@ -236,7 +234,7 @@ export const quitSolo  = async (req: Request, res: Response) => {
     if(!updatedSoloSession){
       throw new ApiError({
         statusCode: 400,
-        message: 'You can only quit solo-tournament at the end of a round',
+        message: 'Error in Ending your Session. Try Again ! !',
       });
     }
   
@@ -259,10 +257,10 @@ export const nextQuestion  = async (req: Request, res: Response) => {
   try {
     const {soloSessionId, userId, questionId, userAnswer, time} = req.body;
     const today = new Date();
-    if(!soloSessionId || !userId || questionId || userAnswer || time){
-      throw new ApiError({
-          statusCode: 400,
-          message: 'Missing required fields: userId, soloSessionId, questionId, userAnswer, time',
+    if(!soloSessionId || !userId || !questionId || (userAnswer === null || userAnswer === undefined) || !time){
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: userId, soloSessionId, questionId, userAnswer, time',
       });
     }
     if (typeof userAnswer !== 'number' || userAnswer < 0 || userAnswer > 9) {
@@ -319,20 +317,33 @@ export const nextQuestion  = async (req: Request, res: Response) => {
       const updatedQuestionsAnswered = session.questionsAnswered + 1;
       const updatedCorrectAnswers = isCorrect ? session.correctAnswers + 1 : session.correctAnswers;
       const newNextLevel = Math.floor(updatedQuestionsAnswered / 2) + 1;
-      const nextGeneratedSeed = generateSeed();
-      let nextGeneratedQuestion: QuestionData;
-      nextGeneratedQuestion = await generateQuestion(newNextLevel);
-      const [updatedSession, newNextQuestion] = await prisma.$transaction([
-        prisma.soloSession.update({
-          where: { id: soloSessionId },
-          data: {
-            bankedPoints: updatedBankedPoint,
-            questionsAnswered: updatedQuestionsAnswered,
-            correctAnswers: updatedCorrectAnswers,
-            currentLevel: newNextLevel,
-          },
-        }),
-        prisma.questionAttempt.create({
+      const updatedSession  = await prisma.soloSession.update({
+        where: { id: soloSessionId },
+        data: {
+          bankedPoints: updatedBankedPoint,
+          questionsAnswered: updatedQuestionsAnswered,
+          correctAnswers: updatedCorrectAnswers,
+          currentLevel: newNextLevel,
+        },
+      })
+      // add check for round_complete : session.questionsANswered % gameConfig.roundSize == 0
+      // if currentRound > gameConfig.free_round - show an add
+      // if yes, dont generate new Question, show option - QUIT / CONTINUE 
+      const roundCompleted = (updatedSession.questionsAnswered % gameConfig.single_player.round_size) === 0;
+      if(roundCompleted){
+        // SHOW an ADD
+        res.status(201).json({
+          success: true,
+          isCorrect: true,
+          roundNumber: updatedSession.currentRound,
+          correctAnswer: question.correctDigit,
+          message: `${session.currentRound} completed. Select CONTINUE to move ahead.`
+        })
+      } else {
+        const nextGeneratedSeed = generateSeed();
+        let nextGeneratedQuestion: QuestionData;
+        nextGeneratedQuestion = await generateQuestion(newNextLevel);
+        const newNextQuestion = await prisma.questionAttempt.create({
           data: {
             soloSessionId: soloSessionId,
             questionIndex: updatedQuestionsAnswered + 1,
@@ -343,19 +354,19 @@ export const nextQuestion  = async (req: Request, res: Response) => {
             kthDigit: nextGeneratedQuestion.kthDigit,
             correctDigit: nextGeneratedQuestion.correctDigit,
           },
-        }),
-      ]);
-
-      const { correctDigit, ...clientSafeQuestion } = newNextQuestion;
-      const sanitizedQuestion = clientSafeQuestion;
-    
-      return res.json({
-        success: true,
-        isCorrect: true,
-        roundNumber: updatedSession.currentRound,
-        correctAnswer: question.correctDigit,
-        nextQuestion: sanitizedQuestion
-      });
+        })
+  
+        const { correctDigit, result, ...clientSafeQuestion } = newNextQuestion;
+        const sanitizedQuestion = clientSafeQuestion;
+      
+        return res.json({
+          success: true,
+          isCorrect: true,
+          roundNumber: updatedSession.currentRound,
+          correctAnswer: question.correctDigit,
+          nextQuestion: sanitizedQuestion
+        });
+      }
     }
     if (!isCorrect && !session.madeMistake) {
       const finalScore = Math.floor(session.bankedPoints / 2);
@@ -382,8 +393,10 @@ export const nextQuestion  = async (req: Request, res: Response) => {
       });
     }
   } catch (error) {
-    console.log("",error);
-    
+    console.log("Error in generating next Question",error);
+    return res
+        .status(500)
+        .json(new ApiResponse(500, 'Failed to generate next question, Try Again ! !'));
   }
 }
 
