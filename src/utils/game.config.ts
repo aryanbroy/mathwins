@@ -18,6 +18,7 @@ const gameConfig = {
 
     single_player: {
       round_size: 5,
+      point_for_correct_answer: 1,
       level_increase_every_n_questions: 2,
       daily_free_attempts: 10,
     },
@@ -34,7 +35,7 @@ const gameConfig = {
         { range: '5', points: 1.5 },
         { range: '5', points: 1 },
         { range: '30', points: 1 },
-      ],
+      ]
     },
 
     caps: {

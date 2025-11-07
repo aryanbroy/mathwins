@@ -131,10 +131,9 @@ export const continueSolo = async (req: Request, res: Response) => {
     const currentLevel = session.currentLevel;
     const questionsAnswered = session.questionsAnswered;
     const roundsCompleted = Math.floor(questionsAnswered / roundSize); 
-  
     let newLevel = currentLevel + Math.floor(roundsCompleted / levelIncrementEvery) + 1;
     newLevel = newLevel < 5 ? newLevel : 5; 
-  
+    
     const questions = await generateQuestions(newLevel, roundSize);
     await prisma.questionAttempt.createMany({
       data: questions.map((q, index) => ({
@@ -152,6 +151,9 @@ export const continueSolo = async (req: Request, res: Response) => {
     const updatedSession = await prisma.soloSession.update({
       where: { id: soloId },
       data: {
+        bankedPoints: {
+          increment: session.currentRound * 0.03,
+        },
         currentRound: session.currentRound + 1,
         currentLevel: newLevel,
         updatedAt: new Date(),
@@ -216,8 +218,8 @@ export const quitSolo  = async (req: Request, res: Response) => {
   
     // - Calculate final score (no penalty for quitting after round)
     // - finalScore = session.bankedPoints
-    const finalScore = calculateSoloScore(session.correctAnswers, session.questionsAnswered);
-    const finalPoints = calculateSoloPoint(finalScore);
+    const roundsCompleted = session.questionsAnswered % gameConfig.single_player.round_size;
+    const finalPoint = session.bankedPoints + (roundsCompleted * 0.03);
 
     const updatedSoloSession = await prisma.soloSession.update({
       where: {
@@ -227,9 +229,7 @@ export const quitSolo  = async (req: Request, res: Response) => {
         updatedAt: today,
         endedAt: today,
         status: 'COMPLETED',
-        bankedPoints: finalPoints,
-        finalScore: finalScore,
-        coinPointsEarned: finalPoints,
+        finalScore: finalPoint,
         quitEarly: true,
       }
     })
@@ -239,33 +239,11 @@ export const quitSolo  = async (req: Request, res: Response) => {
         message: 'You can only quit solo-tournament at the end of a round',
       });
     }
-    
-    // - find rank of user
-    // - Calculate current session rank within top 10
-    const top10 = await prisma.soloSession.findMany({
-      where: { 
-        userId, 
-        date: today, 
-        status: 'COMPLETED' 
-      },
-      orderBy: { finalScore: 'desc' },
-      take: 10,
-      select: { id: true, finalScore: true }
-    })
-    // search userId 
-    console.log(top10);
-    
-    // Calculate coin points (only if in top10)
-    // - If isTop10:
-    // -- Calculate coin points based on rank/formula
-    // -- Update session: coinPointsEarned
-    // - If NOT in top 10: coinPointsEarned = 0
   
     return res.status(200).json({
       message: 'You can leave this window.',
       sessionEnded: true,
-      Leaderboard: top10,
-      yourPoint: finalPoints,
+      finalPoint: finalPoint,
       roundsCompleted: session.currentRound,
     });
   } catch (error) {
@@ -336,22 +314,8 @@ export const nextQuestion  = async (req: Request, res: Response) => {
     }
 
     const isCorrect = userAnswer === question.correctDigit;
-    let points = 0;
     if (isCorrect) {
-      const basePointsMap: { [key: number]: number } = {
-        1: 10,
-        2: 15,
-        3: 20,
-        4: 25,
-        5: 30,
-      };
-      const basePoints = basePointsMap[question.level] || 10;
-  
-      const clampedTime = Math.min(time, 10000);
-      const timeBonus = ((10000 - clampedTime) / 10000) * basePoints * 0.5;
-  
-      points = Math.floor(basePoints + timeBonus);
-
+      const updatedBankedPoint = session.bankedPoints + gameConfig.single_player.point_for_correct_answer;
       const updatedQuestionsAnswered = session.questionsAnswered + 1;
       const updatedCorrectAnswers = isCorrect ? session.correctAnswers + 1 : session.correctAnswers;
       const newNextLevel = Math.floor(updatedQuestionsAnswered / 2) + 1;
@@ -359,10 +323,10 @@ export const nextQuestion  = async (req: Request, res: Response) => {
       let nextGeneratedQuestion: QuestionData;
       nextGeneratedQuestion = await generateQuestion(newNextLevel);
       const [updatedSession, newNextQuestion] = await prisma.$transaction([
-        // Update session progress
         prisma.soloSession.update({
           where: { id: soloSessionId },
           data: {
+            bankedPoints: updatedBankedPoint,
             questionsAnswered: updatedQuestionsAnswered,
             correctAnswers: updatedCorrectAnswers,
             currentLevel: newNextLevel,
@@ -385,28 +349,21 @@ export const nextQuestion  = async (req: Request, res: Response) => {
       const { correctDigit, ...clientSafeQuestion } = newNextQuestion;
       const sanitizedQuestion = clientSafeQuestion;
     
-      // TODO 8: generate next Question
-    
       return res.json({
         success: true,
         isCorrect: true,
-        pointsEarned: points,
-        roundCompleted: true,
         roundNumber: updatedSession.currentRound,
-        roundPoints: basePoints,
-        totalBanked: points,
         correctAnswer: question.correctDigit,
         nextQuestion: sanitizedQuestion
       });
     }
     if (!isCorrect && !session.madeMistake) {
       const finalScore = Math.floor(session.bankedPoints / 2);
-  
-      // Update session - game over
       await prisma.soloSession.update({
         where: { id: soloSessionId },
         data: {
           madeMistake: true,
+          bankedPoints: finalScore,
           finalScore: finalScore,
           status: 'COMPLETED',
           updatedAt: today,
@@ -431,69 +388,91 @@ export const nextQuestion  = async (req: Request, res: Response) => {
 }
 
 export const finalSessionSubmission  = async (req: Request, res: Response) => {
-  // TODO 1: Extract & validate request data
-  //   - sessionId
-  //   - userId (from auth middleware)
-  //   - reason: 'time_limit' | 'max_rounds' | 'user_choice' (optional)
-
-  // TODO 2: Fetch session from database
-  //   - Include: questions (to verify completion)
-  //   - Validate: status must be 'IN_PROGRESS'
-  //   - Validate: session belongs to userId
-
-  // TODO 3: Validate session is actually complete
-  //   - Check: questionsAnswered % 5 === 0 (round completed)
-  //   - If mid-round: return error OR auto-complete with penalty
-
-  // TODO 4: Calculate final statistics
-  //   - totalQuestionsAnswered
-  //   - totalCorrectAnswers
-  //   - accuracy = (correctAnswers / questionsAnswered) * 100
-  //   - roundsCompleted = questionsAnswered / 5
-
-  // TODO 5: Calculate final score
-  //   - If quit mid-round (shouldn't happen): finalScore = bankedPoints / 2
-  //   - If completed round: finalScore = bankedPoints
-  //   - Store in variable
-
-  // TODO 6: Update session to COMPLETED
-  //   - Set: { 
-  //       status: 'COMPLETED', 
-  //       finalScore, 
-  //       endedAt: new Date() 
-  //     }
-
-  // TODO 7: Get user's top 10 sessions for today
-  //   - Query: user's completed solo sessions for today
-  //   - Order by: finalScore DESC
-  //   - Take: 10
-  //   - Calculate rank of current session
-
-  // TODO 8: Calculate coin points for this session
-  //   - Only if session is in top 10
-  //   - Use scoring formula (from config or service)
-  //   - Update session: coinPointsEarned
-
-  // TODO 9: Update user statistics (optional)
-  //   - Increment total games played
-  //   - Update lifetime stats
-  //   - (Or handle this in cron job)
-
-  // TODO 10: Return success response
-  //   - Include: {
-  //       finalScore,
-  //       bankedPoints,
-  //       roundsCompleted,
-  //       accuracy,
-  //       rank (within today's top 10),
-  //       isTop10,
-  //       coinPointsEarned,
-  //       statistics: { totalQuestions, correctAnswers, accuracy }
-  //     }
-
-  // TODO 11: Error handling
-  //   - Wrap in try-catch
-  //   - Handle invalid session, incomplete rounds, etc.
+  try {
+    const { soloSessionId, userId } = req.body;
+    if (!soloSessionId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required field: soloSessionId, userId',
+      });
+    }
+  
+    const session = await prisma.soloSession.findUnique({
+      where: { id: soloSessionId },
+      include: {
+        questions: {
+          select: {
+            id: true,
+            questionIndex: true,
+          },
+        },
+      },
+    });
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found',
+      });
+    }
+    if (session.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized: Session does not belong to this user',
+      });
+    }
+    if (session.status !== 'IN_PROGRESS') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot finalize session: Session is already ${session.status}`,
+      });
+    }
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    if(!user){
+      return res.status(404).json({
+        success: false,
+        message: 'user not found',
+      });
+    }
+  
+    const isRoundComplete = session.questionsAnswered % 5 === 0;
+    let finalPoint: number;
+    let midRoundPenalty = false;
+  
+    if (!isRoundComplete && session.questionsAnswered > 0) {
+      finalPoint = Math.floor(session.bankedPoints / 2);
+      midRoundPenalty = true;
+    } else {
+      finalPoint = session.currentRound * 0.03;
+    }
+  
+    const totalQuestions = session.questionsAnswered;
+    const correctAnswers = session.correctAnswers;
+    const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100 * 100) / 100 : 0;
+    const roundsCompleted = Math.floor(totalQuestions / gameConfig.single_player.round_size);
+  
+    await prisma.soloSession.update({
+      where: { id: soloSessionId },
+      data: {
+        status: 'COMPLETED',
+        finalScore: finalPoint,
+        endedAt: new Date(),
+        quitEarly: false,
+      },
+    });
+  
+    return res.status(201).json({
+      finalPoint: finalPoint,
+      roundsCompleted: roundsCompleted,
+      accuracy: accuracy,
+      message: 'You can leave this window.',
+      sessionEnded: true,
+    })
+  } catch (error) {
+    console.log('Error in Submission. Try Again ! !');
+    res.status(500).send('Error in Submission. Try Again ! !');
+  }
 }
 
 export const minuiteLeaderboard  = async (req: Request, res: Response) => {
