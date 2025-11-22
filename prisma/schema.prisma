@@ -38,7 +38,7 @@ enum TransactionDescription {
   SINGLE_PLAYER
   DAILY_TOURNAMENT
   INSTANT_TOURNAMENT
-  REFERAL_POINT
+  REFERRAL_POINT
   REWARD_CLAIM
 }
 
@@ -56,6 +56,12 @@ enum TournamentStatus {
   CANCELLED
 }
 
+enum InstantTournamentSessionStatus {
+  ACTIVE
+  SUBMITTED
+  EXPIRED
+}
+
 model User {
   id                  String     @id @default(cuid())
   createdAt           DateTime   @default(now())
@@ -63,7 +69,7 @@ model User {
   phoneNumber         String?    @unique
   googleId            String?    @unique
   email               String?    @unique
-  deviceHash          String?    // For device-based merging
+  deviceHash          String? // For device-based merging
   username            String     @unique
   usernameReservedAt  DateTime?
   avatarType          AvatarType @default(DEFAULT)
@@ -86,8 +92,9 @@ model User {
   instantAttemptCount Int        @default(0)
   dailyAttemptCount   Int        @default(0)
 
-  dailySessions DailyTournamentSession[]
-  soloSessions  SoloSession[]
+  dailySessions   DailyTournamentSession[]
+  soloSessions    SoloSession[]
+  instantSessions InstantSession[]
 
   @@index([username])
   @@index([phoneNumber])
@@ -185,11 +192,47 @@ model QuestionAttempt {
   kthDigit      Int // Which digit to ask about
   correctDigit  Int // The correct answer (0-9) 
 
-  dailySessionId String?
-  dailySession   DailyTournamentSession? @relation(fields: [dailySessionId], references: [id], onDelete: Cascade)
-  soloSessionId  String?
-  soloSession    SoloSession?            @relation(fields: [soloSessionId], references: [id], onDelete: Cascade)
+  dailySessionId   String?
+  dailySession     DailyTournamentSession? @relation(fields: [dailySessionId], references: [id], onDelete: Cascade)
+  soloSessionId    String?
+  soloSession      SoloSession?            @relation(fields: [soloSessionId], references: [id], onDelete: Cascade)
+  instantSessionId String?
+  instantSession   InstantSession?         @relation(fields: [instantSessionId], references: [id], onDelete: Cascade)
 
   @@index([dailySessionId])
   @@index([soloSessionId])
+  @@index([instantSessionId])
+}
+
+model InstantTournament {
+  id           String           @id @default(cuid())
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  status       TournamentStatus @default(OPEN)
+  maxPlayers   Int              @default(100)
+  playersCount Int              @default(0)
+
+  sessions InstantSession[]
+
+  @@index([status])
+}
+
+model InstantSession {
+  id        String                         @id @default(cuid())
+  sessionId String                         @unique
+  roomId    String
+  userId    String
+  user      User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    InstantTournamentSessionStatus @default(ACTIVE)
+
+  tournamentId String
+  tournament   InstantTournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  questions  QuestionAttempt[]
+  score      Int               @default(0)
+  finalScore Int?
+
+  startedAt   DateTime  @default(now())
+  endsAt      DateTime?
+  submittedAt DateTime?
 }

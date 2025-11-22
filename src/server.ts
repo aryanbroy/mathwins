@@ -29,12 +29,14 @@ import authRouter from './routes/auth.route';
 import gameRouter from './routes/game.route';
 import dailyTournamentRouter from './routes/dailyTour.route';
 import soloRouter from './routes/solo.route';
+import instantRouter from './routes/instant.route';
 
 app.use('/api/user', userRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/game', gameRouter);
 app.use('/api/daily', dailyTournamentRouter);
 app.use('/api/solo', soloRouter);
+app.use('/api/instant', instantRouter);
 
 app.listen(port, () => {
   console.log(`Server listening to port: ${port}`);
