@@ -92,9 +92,10 @@ model User {
   instantAttemptCount Int        @default(0)
   dailyAttemptCount   Int        @default(0)
 
-  dailySessions   DailyTournamentSession[]
-  soloSessions    SoloSession[]
-  instantSessions InstantSession[]
+  dailySessions      DailyTournamentSession[]
+  soloSessions       SoloSession[]
+  instantSessions    InstantSession[]
+  instantParticipant InstantParticipant[]
 
   @@index([username])
   @@index([phoneNumber])
@@ -103,16 +104,13 @@ model User {
 }
 
 model DailyTournament {
-  id            String           @id @default(cuid())
-  date          DateTime         @unique @db.Date
-  createdAt     DateTime         @default(now())
-  status        TournamentStatus @default(OPEN)
-  configVersion String?
-  minute1       Json             @default("[]") // Array of {userId, score, timestamp}
-  minute2       Json             @default("[]")
-  minute3       Json             @default("[]")
-  minute4       Json             @default("[]")
-  final         Json             @default("[]")
+  id             String           @id @default(cuid())
+  date           DateTime         @unique @db.Date
+  createdAt      DateTime         @default(now())
+  status         TournamentStatus @default(OPEN)
+  configVersion  String?
+  minuteSnapshot MinuteSnapshot[]
+  final          Json             @default("[]")
 
   sessions DailyTournamentSession[]
 
@@ -151,6 +149,18 @@ model DailyTournamentSession {
   @@index([userId])
   @@index([tournamentId])
   @@map("DailyTournamentSession")
+}
+
+model MinuteSnapshot {
+  id           String          @id @default(cuid())
+  tournamentId String
+  tournament   DailyTournament @relation(fields: [tournamentId], references: [id])
+  minuteNumber Int
+  snapshot     Json
+
+  createdAt DateTime @default(now())
+
+  @@index([tournamentId, minuteNumber])
 }
 
 model SoloSession {
@@ -205,25 +215,28 @@ model QuestionAttempt {
 }
 
 model InstantTournament {
-  id           String           @id @default(cuid())
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  id String @id @default(cuid())
+
   status       TournamentStatus @default(OPEN)
   maxPlayers   Int              @default(100)
   playersCount Int              @default(0)
 
   sessions InstantSession[]
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime
+
+  instantParticipant InstantParticipant[]
+
   @@index([status])
 }
 
 model InstantSession {
-  id        String                         @id @default(cuid())
-  sessionId String                         @unique
-  roomId    String
-  userId    String
-  user      User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status    InstantTournamentSessionStatus @default(ACTIVE)
+  id     String                         @id @default(cuid())
+  userId String
+  user   User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status InstantTournamentSessionStatus @default(ACTIVE)
 
   tournamentId String
   tournament   InstantTournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
@@ -235,4 +248,27 @@ model InstantSession {
   startedAt   DateTime  @default(now())
   endsAt      DateTime?
   submittedAt DateTime?
+
+  @@unique([userId, tournamentId])
+}
+
+model InstantParticipant {
+  tournamentId String
+  tournament   InstantTournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  joinedAt  DateTime @default(now())
+  joinOrder Int
+
+  sessionStarted Boolean @default(false)
+
+  finalScore  Int?
+  submittedAt DateTime?
+  finalRank   Int?
+
+  @@id([tournamentId, userId])
+  @@unique([tournamentId, userId])
+  @@index([userId, joinedAt])
 }
