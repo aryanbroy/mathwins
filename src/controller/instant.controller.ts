@@ -3,10 +3,7 @@ import { ApiError } from '../utils/api/ApiError';
 import prisma from '../prisma';
 import { ApiResponse } from '../utils/api/ApiResponse';
 import { asyncHandler } from '../middlewares/asyncHandler';
-import {
-  findOrCreateInstantRoom,
-  joinRoom,
-} from '../utils/helper_handler/instant';
+import { joinOrCreateRoomHandler } from '../utils/helper_handler/instant';
 
 export const testInstant = async (req: Request, res: Response) => {
   console.log('working');
@@ -26,14 +23,8 @@ export const joinOrCreateTournament = asyncHandler(
     const now = new Date();
 
     const result = await prisma.$transaction(async (tx) => {
-      const tournament = await findOrCreateInstantRoom(tx, now);
-
-      const { participant, newRoom } = await joinRoom(
-        tx,
-        tournament.id,
-        userId
-      );
-      return { newRoom, participant };
+      const room = await joinOrCreateRoomHandler(tx, userId, now);
+      return room;
     });
 
     res.status(200).json(new ApiResponse(200, result));

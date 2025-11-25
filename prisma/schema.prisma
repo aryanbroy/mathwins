@@ -229,7 +229,7 @@ model InstantTournament {
 
   instantParticipant InstantParticipant[]
 
-  @@index([status])
+  @@index([status, id])
 }
 
 model InstantSession {
