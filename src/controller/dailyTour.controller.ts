@@ -143,7 +143,7 @@ export const updateSessionScore = asyncHandler(
       });
     }
 
-    if (question.result != answer) {
+    if (question.correctDigit != answer) {
       // dont update the score here (fix this later)
       await prisma.dailyTournamentSession.update({
         where: {
@@ -190,12 +190,19 @@ export const finalSessionSubmission = asyncHandler(
       });
     }
 
-    const { sessionId, finalScore, endedAt } = req.body; // sessionId can be later extracted from cookies
+    // ended at (get from frontend)
+    let { sessionId, endedAt } = req.body; // sessionId can be later extracted from cookies
 
-    if (!finalScore || !sessionId || endedAt) {
+    // delete this later after linking frontend
+    const now = new Date();
+    endedAt = new Date(now.getTime() + 5 * 60 * 1000);
+    //
+
+    // console.log(sessionId, endedAt);
+    if (!sessionId || !endedAt) {
       throw new ApiError({
         statusCode: 400,
-        message: 'Received empty fields: finalScore, sessionId, endedAt',
+        message: 'Received empty fields:  sessionId, endedAt',
       });
     }
 
@@ -209,6 +216,7 @@ export const finalSessionSubmission = asyncHandler(
     }
 
     const currentBestScore = session.bestScore;
+    const finalScore = session.currentScore;
 
     const updatedSession = await prisma.dailyTournamentSession.update({
       where: {
@@ -228,5 +236,14 @@ export const finalSessionSubmission = asyncHandler(
       .json(
         new ApiResponse(202, updatedSession, 'Successful final submission')
       );
+  }
+);
+
+export const minuteScoreUpdate = asyncHandler(
+  async (req: Request, res: Response) => {
+    const minute = req.params['minute'];
+    console.log(minute);
+
+    res.status(200).json({ sucess: true });
   }
 );
