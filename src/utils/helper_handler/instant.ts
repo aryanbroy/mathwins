@@ -1,10 +1,15 @@
-import { create } from 'domain';
 import {
   MAX_PLAYERS,
   MIN_TIME_TO_JOIN,
+  SESSION_DURATION_MIN,
+  MIN_TO_MILLISECONDS,
   TOURNAMENT_DURATION_MIN,
 } from '../../config/instant.config';
-import { InstantTournament, Prisma } from '../../generated/prisma';
+import {
+  InstantSession,
+  InstantTournament,
+  Prisma,
+} from '../../generated/prisma';
 import { ApiError } from '../api/ApiError';
 
 export const createInstantTournamentRoom = async (
@@ -24,7 +29,7 @@ export const joinOrCreateRoomHandler = async (
   now: Date
 ): Promise<InstantTournament> => {
   const validExpiryInterval = new Date(
-    now.getTime() + MIN_TIME_TO_JOIN * 60 * 1000
+    now.getTime() + MIN_TIME_TO_JOIN * MIN_TO_MILLISECONDS
   );
 
   const tournaments = await tx.$queryRaw<
@@ -101,5 +106,52 @@ export const joinOrCreateRoomHandler = async (
         errors: err,
       });
     }
+  }
+};
+
+export const startSessionHandler = async (
+  tx: Prisma.TransactionClient,
+  userId: string,
+  roomId: string
+): Promise<InstantSession> => {
+  try {
+    const session = await tx.instantSession.create({
+      data: {
+        userId: userId,
+        tournamentId: roomId,
+        endsAt: new Date(
+          Date.now() + SESSION_DURATION_MIN * MIN_TO_MILLISECONDS
+        ),
+      },
+    });
+
+    await tx.instantParticipant.update({
+      data: {
+        sessionStarted: true,
+      },
+      where: {
+        tournamentId_userId: {
+          tournamentId: roomId,
+          userId: userId,
+        },
+      },
+    });
+
+    await tx.user.update({
+      data: {
+        instantAttemptCount: { increment: 1 },
+      },
+      where: {
+        id: userId,
+      },
+    });
+
+    return session;
+  } catch (err) {
+    throw new ApiError({
+      statusCode: 500,
+      message: 'Error in session handler',
+      errors: err,
+    });
   }
 };

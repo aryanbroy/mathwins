@@ -23,6 +23,7 @@ export const verifyUser = async (
       throw new ApiError({ statusCode: 404, message: 'User not authorized' });
 
     req.userId = userId;
+    req.instantAttempCount = user.instantAttemptCount;
     next();
   } catch (err: unknown) {
     throw new ApiError({
