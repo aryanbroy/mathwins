@@ -61,3 +61,7 @@ export const checkUserAlreadyInTournament = async (
     });
   }
 };
+
+export const validExpiryInterval = (now: Date) => {
+  return new Date(now.getTime() + MIN_TIME_TO_JOIN * MIN_TO_MILLISECONDS);
+};

@@ -10,6 +10,8 @@ import {
   InstantTournament,
   Prisma,
 } from '../../generated/prisma';
+import { validExpiryInterval } from '../../helpers/instant.helper';
+import prisma from '../../prisma';
 import { ApiError } from '../api/ApiError';
 
 export const createInstantTournamentRoom = async (
@@ -28,15 +30,11 @@ export const joinOrCreateRoomHandler = async (
   userId: string,
   now: Date
 ): Promise<InstantTournament> => {
-  const validExpiryInterval = new Date(
-    now.getTime() + MIN_TIME_TO_JOIN * MIN_TO_MILLISECONDS
-  );
-
   const tournaments = await tx.$queryRaw<
     InstantTournament[]
   >`SELECT * FROM "InstantTournament"
     where status = 'OPEN'
-    AND "expiresAt" >  ${validExpiryInterval}
+    AND "expiresAt" >  ${validExpiryInterval(now)}
     AND "playersCount" < ${MAX_PLAYERS}
     ORDER BY "createdAt" ASC
     LIMIT 1
@@ -151,6 +149,30 @@ export const startSessionHandler = async (
     throw new ApiError({
       statusCode: 500,
       message: 'Error in session handler',
+      errors: err,
+    });
+  }
+};
+
+export const listRoomsHandler = async (
+  now: Date
+): Promise<InstantTournament[]> => {
+  try {
+    const availableRooms = await prisma.instantTournament.findMany({
+      where: {
+        status: 'OPEN',
+        expiresAt: { gt: validExpiryInterval(now) },
+        playersCount: { lt: MAX_PLAYERS },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    return availableRooms;
+  } catch (err) {
+    throw new ApiError({
+      statusCode: 500,
+      message: 'error fetching all tournaments',
       errors: err,
     });
   }

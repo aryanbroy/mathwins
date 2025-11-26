@@ -5,6 +5,7 @@ import { ApiResponse } from '../utils/api/ApiResponse';
 import { asyncHandler } from '../middlewares/asyncHandler';
 import {
   joinOrCreateRoomHandler,
+  listRoomsHandler,
   startSessionHandler,
 } from '../utils/helper_handler/instant';
 import {
@@ -86,3 +87,27 @@ export const startSession = asyncHandler(
     res.status(201).json(new ApiResponse(201, result, 'session started'));
   }
 );
+
+export const listRooms = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.userId;
+  if (!userId) {
+    throw new ApiError({ statusCode: 403, message: 'Unauthorized user' });
+  }
+  const now = new Date();
+  const availableRooms = await listRoomsHandler(now);
+  if (!availableRooms || availableRooms.length == 0) {
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { availableRooms: [] }, 'no rooms available'));
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { availableRooms },
+        'fetched available rooms successfuly'
+      )
+    );
+});
