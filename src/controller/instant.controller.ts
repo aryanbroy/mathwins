@@ -4,6 +4,7 @@ import prisma from '../prisma';
 import { ApiResponse } from '../utils/api/ApiResponse';
 import { asyncHandler } from '../middlewares/asyncHandler';
 import {
+  finalSubmissionHandler,
   joinOrCreateRoomHandler,
   listRoomsHandler,
   startSessionHandler,
@@ -13,7 +14,9 @@ import {
   checkActiveSession,
   checkQuestionIsValid,
   checkUserAlreadyInTournament,
+  updateSessionFinalScore,
   loadSession,
+  validateSubmission,
 } from '../helpers/instant.helper';
 import { MAX_ATTEMPT } from '../config/instant.config';
 
@@ -180,3 +183,66 @@ export const submitQuestion = asyncHandler(
       .json(new ApiResponse(200, result, 'question submitted successfuly'));
   }
 );
+
+export const submitFinal = asyncHandler(async (req: Request, res: Response) => {
+  const submittedAt = new Date();
+  const userId = req.userId;
+  if (!userId) {
+    throw new ApiError({ statusCode: 401, message: 'Unauthorized user' });
+  }
+  const { sessionId, roomId } = req.body;
+  if (!roomId || !sessionId) {
+    throw new ApiError({
+      statusCode: 400,
+      message: 'empty fields received: sessionId, roomId',
+    });
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const session = await loadSession(tx, sessionId);
+    if (!session) {
+      throw new ApiError({
+        statusCode: 404,
+        message: `error! session not found with id ${sessionId}`,
+      });
+    }
+    if (session.userId !== userId) {
+      throw new ApiError({
+        statusCode: 401,
+        message: `error! session: ${sessionId} does not belong to user: ${userId}`,
+      });
+    }
+    if (
+      (session.endsAt != null && session.endsAt < submittedAt) ||
+      session.status != 'ACTIVE'
+    ) {
+      throw new ApiError({ statusCode: 400, message: 'session expired' });
+    }
+
+    const updatedSession = await updateSessionFinalScore(
+      tx,
+      sessionId,
+      session.score
+    );
+    if (!updatedSession || !updatedSession.finalScore) {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'error: unable to update final score',
+      });
+    }
+
+    await validateSubmission(tx, roomId, submittedAt);
+    return await finalSubmissionHandler(
+      tx,
+      sessionId,
+      submittedAt,
+      roomId,
+      userId,
+      updatedSession.finalScore
+    );
+  });
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, result, 'final submission successful'));
+});

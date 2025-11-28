@@ -203,3 +203,37 @@ export const submitQuestionHandler = async (
     });
   }
 };
+
+export const finalSubmissionHandler = async (
+  tx: Prisma.TransactionClient,
+  sessionId: string,
+  submittedAt: Date,
+  roomId: string,
+  userId: string,
+  finalScore: number
+) => {
+  await tx.instantParticipant.update({
+    where: {
+      tournamentId_userId: {
+        tournamentId: roomId,
+        userId,
+      },
+    },
+    data: {
+      submittedAt,
+      finalScore,
+    },
+  });
+
+  const updatedSession = await tx.instantSession.update({
+    where: {
+      id: sessionId,
+    },
+    data: {
+      status: 'SUBMITTED',
+      submittedAt: submittedAt,
+    },
+  });
+
+  return updatedSession;
+};

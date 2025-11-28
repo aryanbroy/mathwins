@@ -45,14 +45,11 @@ export const checkUserAlreadyInTournament = async (
   roomId: string,
   now: Date
 ): Promise<boolean> => {
-  const validExpiryInterval = new Date(
-    now.getTime() + MIN_TIME_TO_JOIN * MIN_TO_MILLISECONDS
-  );
   try {
     const isUserAlreadyInTournament = await prisma.instantTournament.findFirst({
       where: {
         id: roomId,
-        expiresAt: { gt: validExpiryInterval },
+        expiresAt: { gt: validExpiryInterval(now) },
       },
       include: {
         sessions: {
@@ -87,6 +84,7 @@ export const loadSession = async (
   endsAt: Date | null;
   status: InstantTournamentSessionStatus;
   userId: string;
+  score: number;
 } | null> => {
   try {
     const session = await tx.instantSession.findUnique({
@@ -98,6 +96,7 @@ export const loadSession = async (
         endsAt: true,
         status: true,
         userId: true,
+        score: true,
       },
     });
     return session;
@@ -170,4 +169,53 @@ export const updateSessionScore = async (
     });
   }
   return updatedSession;
+};
+
+export const updateSessionFinalScore = async (
+  tx: Prisma.TransactionClient,
+  sessionId: string,
+  score: number
+): Promise<InstantSession | null> => {
+  const updatedSession = await tx.instantSession.update({
+    data: {
+      finalScore: score,
+    },
+    where: {
+      id: sessionId,
+    },
+  });
+
+  return updatedSession;
+};
+
+export const validateSubmission = async (
+  tx: Prisma.TransactionClient,
+  roomId: string,
+  submittedAt: Date
+) => {
+  const room = await tx.instantTournament.findUnique({
+    where: {
+      id: roomId,
+    },
+  });
+  if (!room) {
+    throw new ApiError({
+      statusCode: 400,
+      message: 'invalid room id received: no room exist with the specified id',
+    });
+  }
+
+  if (room.status !== 'OPEN') {
+    throw new ApiError({
+      statusCode: 400,
+      message: 'room closed',
+    });
+  }
+
+  if (submittedAt > room.expiresAt) {
+    throw new ApiError({
+      statusCode: 403,
+      message: 'submission window closed',
+    });
+  }
 };

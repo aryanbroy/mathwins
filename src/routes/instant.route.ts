@@ -3,6 +3,7 @@ import {
   joinOrCreateTournament,
   listRooms,
   startSession,
+  submitFinal,
   submitQuestion,
   testInstant,
 } from '../controller/instant.controller';
@@ -15,5 +16,6 @@ router.post('/join_or_create', verifyUser, joinOrCreateTournament);
 router.post('/start_session', verifyUser, startSession);
 router.get('/rooms/available', verifyUser, listRooms);
 router.post('/submit_question', verifyUser, submitQuestion);
+router.post('/submit_final', verifyUser, submitFinal);
 
 export default router;
