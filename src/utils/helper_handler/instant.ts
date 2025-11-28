@@ -1,6 +1,5 @@
 import {
   MAX_PLAYERS,
-  MIN_TIME_TO_JOIN,
   SESSION_DURATION_MIN,
   MIN_TO_MILLISECONDS,
   TOURNAMENT_DURATION_MIN,
@@ -10,9 +9,15 @@ import {
   InstantTournament,
   Prisma,
 } from '../../generated/prisma';
-import { validExpiryInterval } from '../../helpers/instant.helper';
+import {
+  checkAnswer,
+  QuestionValidationType,
+  updateSessionScore,
+  validExpiryInterval,
+} from '../../helpers/instant.helper';
 import prisma from '../../prisma';
 import { ApiError } from '../api/ApiError';
+import { calculateInstantScore } from '../score.utils';
 
 export const createInstantTournamentRoom = async (
   tx: Prisma.TransactionClient
@@ -172,7 +177,28 @@ export const listRoomsHandler = async (
   } catch (err) {
     throw new ApiError({
       statusCode: 500,
-      message: 'error fetching all tournaments',
+      message: 'Internal server error: error fetching all tournaments',
+      errors: err,
+    });
+  }
+};
+
+export const submitQuestionHandler = async (
+  tx: Prisma.TransactionClient,
+  question: QuestionValidationType,
+  sessionId: string,
+  answer: number,
+  timeTakenMs: number
+): Promise<InstantSession> => {
+  try {
+    const score = calculateInstantScore(answer, question.level, timeTakenMs);
+    const updatedSession = await updateSessionScore(tx, sessionId, score);
+
+    return updatedSession;
+  } catch (err) {
+    throw new ApiError({
+      statusCode: 500,
+      message: 'Internal server error: error submiting question',
       errors: err,
     });
   }

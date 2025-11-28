@@ -250,6 +250,7 @@ model InstantSession {
   submittedAt DateTime?
 
   @@unique([userId, tournamentId])
+  @@index([id])
 }
 
 model InstantParticipant {
