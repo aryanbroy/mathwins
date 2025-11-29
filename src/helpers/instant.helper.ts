@@ -78,27 +78,29 @@ export const checkUserAlreadyInTournament = async (
 
 export const loadSession = async (
   tx: Prisma.TransactionClient,
-  sessionId: string
-): Promise<{
-  id: string;
-  endsAt: Date | null;
-  status: InstantTournamentSessionStatus;
-  userId: string;
-  score: number;
-} | null> => {
+  sessionId: string,
+  userId: string
+): Promise<InstantSession> => {
   try {
     const session = await tx.instantSession.findUnique({
       where: {
         id: sessionId,
       },
-      select: {
-        id: true,
-        endsAt: true,
-        status: true,
-        userId: true,
-        score: true,
-      },
     });
+
+    if (!session) {
+      throw new ApiError({
+        statusCode: 404,
+        message: `error! session not found with id ${sessionId}`,
+      });
+    }
+    if (session.userId !== userId) {
+      throw new ApiError({
+        statusCode: 401,
+        message: `error! session: ${sessionId} does not belong to user: ${userId}`,
+      });
+    }
+
     return session;
   } catch (err) {
     throw new ApiError({
@@ -218,4 +220,27 @@ export const validateSubmission = async (
       message: 'submission window closed',
     });
   }
+};
+
+export const markSessionAsCompleted = async (
+  tx: Prisma.TransactionClient,
+  sessionId: string
+): Promise<InstantSession> => {
+  const updatedSession = await tx.instantSession.update({
+    where: {
+      id: sessionId,
+    },
+    data: {
+      status: 'SUBMITTED',
+    },
+  });
+
+  if (!updatedSession) {
+    throw new ApiError({
+      statusCode: 400,
+      message: 'error updating existing session status',
+    });
+  }
+
+  return updatedSession;
 };

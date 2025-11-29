@@ -17,6 +17,7 @@ import {
   updateSessionFinalScore,
   loadSession,
   validateSubmission,
+  markSessionAsCompleted,
 } from '../helpers/instant.helper';
 import { MAX_ATTEMPT } from '../config/instant.config';
 
@@ -140,19 +141,7 @@ export const submitQuestion = asyncHandler(
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const session = await loadSession(tx, sessionId);
-      if (!session) {
-        throw new ApiError({
-          statusCode: 404,
-          message: `error! session not found with id ${sessionId}`,
-        });
-      }
-      if (session.userId !== userId) {
-        throw new ApiError({
-          statusCode: 404,
-          message: `error! session: ${sessionId} does not belong to user: ${userId}`,
-        });
-      }
+      const session = await loadSession(tx, sessionId, userId);
       if (
         (session.endsAt != null && session.endsAt < submittedAt) ||
         session.status != 'ACTIVE'
@@ -190,34 +179,43 @@ export const submitFinal = asyncHandler(async (req: Request, res: Response) => {
   if (!userId) {
     throw new ApiError({ statusCode: 401, message: 'Unauthorized user' });
   }
-  const { sessionId, roomId } = req.body;
-  if (!roomId || !sessionId) {
+  const { sessionId } = req.body;
+  if (!sessionId) {
     throw new ApiError({
       statusCode: 400,
-      message: 'empty fields received: sessionId, roomId',
+      message: 'empty fields received: sessionId',
     });
   }
 
   const result = await prisma.$transaction(async (tx) => {
-    const session = await loadSession(tx, sessionId);
-    if (!session) {
-      throw new ApiError({
-        statusCode: 404,
-        message: `error! session not found with id ${sessionId}`,
-      });
-    }
-    if (session.userId !== userId) {
-      throw new ApiError({
-        statusCode: 401,
-        message: `error! session: ${sessionId} does not belong to user: ${userId}`,
-      });
-    }
-    if (
-      (session.endsAt != null && session.endsAt < submittedAt) ||
-      session.status != 'ACTIVE'
-    ) {
+    const session = await loadSession(tx, sessionId, userId);
+    if (session.endsAt != null && session.endsAt < submittedAt) {
       throw new ApiError({ statusCode: 400, message: 'session expired' });
     }
+    if (session.finalScore !== null) {
+      const existingSession = await markSessionAsCompleted(tx, session.id);
+      return {
+        alreadySubmitted: true,
+        session: existingSession,
+      };
+    }
+
+    if (session.status === 'SUBMITTED') {
+      return {
+        alreadySubmitted: true,
+        session: session,
+      };
+    }
+
+    if (session.status === 'EXPIRED') {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'session expired',
+      });
+    }
+    const roomId = session.tournamentId;
+
+    await validateSubmission(tx, roomId, submittedAt);
 
     const updatedSession = await updateSessionFinalScore(
       tx,
@@ -231,8 +229,7 @@ export const submitFinal = asyncHandler(async (req: Request, res: Response) => {
       });
     }
 
-    await validateSubmission(tx, roomId, submittedAt);
-    return await finalSubmissionHandler(
+    const sessionFinalSubmission = await finalSubmissionHandler(
       tx,
       sessionId,
       submittedAt,
@@ -240,9 +237,16 @@ export const submitFinal = asyncHandler(async (req: Request, res: Response) => {
       userId,
       updatedSession.finalScore
     );
+
+    return {
+      alreadySubmitted: false,
+      session: sessionFinalSubmission,
+    };
   });
 
-  res
-    .status(200)
-    .json(new ApiResponse(200, result, 'final submission successful'));
+  const message = result.alreadySubmitted
+    ? 'session already submitted'
+    : 'final submission successful';
+
+  res.status(200).json(new ApiResponse(200, result, message));
 });
