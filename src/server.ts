@@ -30,6 +30,7 @@ import gameRouter from './routes/game.route';
 import dailyTournamentRouter from './routes/dailyTour.route';
 import soloRouter from './routes/solo.route';
 import instantRouter from './routes/instant.route';
+import { errorHandler } from './middlewares/error.middleware';
 
 app.use('/api/user', userRouter);
 app.use('/api/auth', authRouter);
@@ -38,6 +39,7 @@ app.use('/api/daily', dailyTournamentRouter);
 app.use('/api/solo', soloRouter);
 app.use('/api/instant', instantRouter);
 
+app.use(errorHandler);
 app.listen(port, () => {
   console.log(`Server listening to port: ${port}`);
 });
