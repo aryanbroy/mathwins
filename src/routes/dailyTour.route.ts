@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   createDailyTournament,
   createDailyTournamentSession,
+  fetchDailyAttempts,
   fetchDailyTournament,
   finalSessionSubmission,
   minuteScoreUpdate,
@@ -11,8 +12,9 @@ import { verifyUser } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-router.post('/start', fetchDailyTournament);
+router.get('/attempts', verifyUser, fetchDailyAttempts);
 router.post('/create', verifyUser, createDailyTournament);
+router.get('/start', verifyUser, fetchDailyTournament);
 
 router.post('/session/create', verifyUser, createDailyTournamentSession);
 router.patch('/session/update_score', verifyUser, updateSessionScore);

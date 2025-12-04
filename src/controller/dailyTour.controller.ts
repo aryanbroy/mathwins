@@ -7,14 +7,60 @@ import { generateSeed } from '../utils/seed.utils';
 import { calculateDailyScore } from '../utils/score.utils';
 import { UserTournamentStatus } from '../generated/prisma';
 
-export const fetchDailyTournament = async (req: Request, res: Response) => {
-  try {
-    const { sessionId, tournamentId, difficultySeed, timer } = req.body;
-    res.status(200).json({ sessionId, tournamentId, difficultySeed, timer });
-  } catch (err) {
-    console.log('Error fetching daily tournament: ', err);
-    res.status(500).json(err);
+export const fetchDailyAttempts = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId, dailyAttemptCount } = req;
+    if (!userId) {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'Invalid user id',
+      });
+    }
+
+    if (dailyAttemptCount == null) {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'error: failed to fetch daily attempt',
+      });
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { dailyAttemptCount },
+          'fetched daily tournament attempts'
+        )
+      );
   }
+);
+
+export const fetchDailyTournament = async (req: Request, res: Response) => {
+  const { userId } = req;
+  if (!userId) {
+    throw new ApiError({
+      statusCode: 400,
+      message: 'Invalid user id',
+    });
+  }
+  const today = new Date();
+  const tournamentStartDate = new Date(
+    Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+  );
+
+  const tournament = await prisma.dailyTournament.findUnique({
+    where: {
+      date: tournamentStartDate,
+    },
+  });
+  if (!tournament) {
+    throw new ApiError({ statusCode: 400, message: 'tournament not started' });
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, tournament, 'fetched daily tournament details'));
 };
 
 export const createDailyTournament = asyncHandler(
@@ -23,7 +69,7 @@ export const createDailyTournament = asyncHandler(
     if (!userId) {
       throw new ApiError({
         statusCode: 400,
-        message: 'Received invalid user id from auth handler',
+        message: 'Invalid user id',
       });
     }
 
