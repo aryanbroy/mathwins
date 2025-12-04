@@ -38,8 +38,10 @@ app.use('/api/game', gameRouter);
 app.use('/api/daily', dailyTournamentRouter);
 app.use('/api/solo', soloRouter);
 app.use('/api/instant', instantRouter);
+app.use('/admin/api/instant', instantRouter);
 
 app.use(errorHandler);
+
 app.listen(port, () => {
   console.log(`Server listening to port: ${port}`);
 });
