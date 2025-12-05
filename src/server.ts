@@ -31,6 +31,9 @@ import dailyTournamentRouter from './routes/dailyTour.route';
 import soloRouter from './routes/solo.route';
 import instantRouter from './routes/instant.route';
 
+import { adminLogin } from './controller/admin/auth.controller';
+import { updateSolo, updateDaily, updateInstant, updateQuestionConfig, updateAddConfig, updateLifeline } from './controller/admin/editconfig.controller';
+
 app.use('/api/user', userRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/game', gameRouter);
@@ -38,7 +41,8 @@ app.use('/api/daily', dailyTournamentRouter);
 app.use('/api/solo', soloRouter);
 app.use('/api/instant', instantRouter);
 
-app.use('/admin/api/instant', instantRouter);
+app.use('/api/admin/login', adminLogin);
+app.use('/api/admin/updatesolo', updateSolo);
 
 app.listen(port, () => {
   console.log(`Server listening to port: ${port}`);
