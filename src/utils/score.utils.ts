@@ -4,7 +4,11 @@ const calculateBasePoints = (level: number, answer: number): number => {
   return basePoints;
 };
 
-export const calculateDailyScore = (basePoints: number, timeTaken: number) => {
+export const calculateDailyScore = (
+  userAns: number,
+  basePoints: number,
+  timeTaken: number
+) => {
   // according to the scroll wheel
   // only needed in daily tournament
   return 10;
