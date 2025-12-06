@@ -17,7 +17,6 @@ class ApiError extends Error {
     stack = '',
   }: ApiErrorOptions) {
     super(message);
-
     this.message = message;
     this.statusCode = statusCode;
     this.errors = errors;

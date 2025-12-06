@@ -30,6 +30,7 @@ import gameRouter from './routes/game.route';
 import dailyTournamentRouter from './routes/dailyTour.route';
 import soloRouter from './routes/solo.route';
 import instantRouter from './routes/instant.route';
+import { errorHandler } from './middlewares/error.middleware';
 
 import { adminLogin } from './controller/admin/auth.controller';
 import { updateSolo, updateDaily, updateInstant, updateQuestionConfig, updateAddConfig, updateLifeline } from './controller/admin/editconfig.controller';
@@ -43,6 +44,8 @@ app.use('/api/instant', instantRouter);
 
 app.use('/api/admin/login', adminLogin);
 app.use('/api/admin/updatesolo', updateSolo);
+
+app.use(errorHandler);
 
 app.listen(port, () => {
   console.log(`Server listening to port: ${port}`);

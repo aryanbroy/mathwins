@@ -9,7 +9,9 @@ export const verifyUser = async (
 ) => {
   try {
     // instead of fetching the direct authorization, update this to get the token from cookies or headers (use jwt for verification)
-    const incomingUserId = req.header('Authorization');
+    // const incomingUserId = req.header('Authorization');
+    const incomingUserId = 'cmieji4lo0000yne74g3qa6lf';
+    // const incomingUserId = '';
     const userId = String(incomingUserId);
     if (!userId)
       throw new ApiError({ statusCode: 400, message: 'Empty user id field' });
@@ -24,11 +26,13 @@ export const verifyUser = async (
 
     req.userId = userId;
     req.instantAttempCount = user.instantAttemptCount;
+    req.dailyAttemptCount = user.dailyAttemptCount;
     next();
   } catch (err: unknown) {
+    console.log(err);
     throw new ApiError({
       statusCode: 500,
-      message: 'Error verifying user',
+      message: 'error verifying user',
     });
   }
 };

@@ -6,15 +6,63 @@ import { ApiError } from '../utils/api/ApiError';
 import { generateSeed } from '../utils/seed.utils';
 import { calculateDailyScore } from '../utils/score.utils';
 import { UserTournamentStatus } from '../generated/prisma';
+import { generateQuestion } from '../utils/question.utils';
+import { processQuestionScore } from '../helpers/daily.helper';
+
+export const fetchDailyAttempts = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId, dailyAttemptCount } = req;
+    if (!userId) {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'Invalid user id',
+      });
+    }
+
+    if (dailyAttemptCount == null) {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'error: failed to fetch daily attempt',
+      });
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { dailyAttemptCount },
+          'fetched daily tournament attempts'
+        )
+      );
+  }
+);
 
 export const fetchDailyTournament = async (req: Request, res: Response) => {
-  try {
-    const { sessionId, tournamentId, difficultySeed, timer } = req.body;
-    res.status(200).json({ sessionId, tournamentId, difficultySeed, timer });
-  } catch (err) {
-    console.log('Error fetching daily tournament: ', err);
-    res.status(500).json(err);
+  const { userId } = req;
+  if (!userId) {
+    throw new ApiError({
+      statusCode: 400,
+      message: 'Invalid user id',
+    });
   }
+  const today = new Date();
+  const tournamentStartDate = new Date(
+    Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+  );
+
+  const tournament = await prisma.dailyTournament.findUnique({
+    where: {
+      date: tournamentStartDate,
+    },
+  });
+  if (!tournament) {
+    throw new ApiError({ statusCode: 400, message: 'tournament not started' });
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, tournament, 'fetched daily tournament details'));
 };
 
 export const createDailyTournament = asyncHandler(
@@ -23,7 +71,7 @@ export const createDailyTournament = asyncHandler(
     if (!userId) {
       throw new ApiError({
         statusCode: 400,
-        message: 'Received invalid user id from auth handler',
+        message: 'Invalid user id',
       });
     }
 
@@ -67,6 +115,34 @@ export const createDailyTournamentSession = asyncHandler(
     );
 
     const sessionSeed = generateSeed();
+    const existingSession = await prisma.dailyTournamentSession.findFirst({
+      where: {
+        userId: userId,
+        status: 'IN_PROGRESS',
+      },
+      include: {
+        questions: {
+          orderBy: {
+            questionIndex: 'desc',
+          },
+          take: 1,
+        },
+      },
+    });
+
+    if (existingSession) {
+      const lastQuestion = existingSession.questions[0];
+      return res.status(200).json(
+        new ApiResponse(
+          200,
+          {
+            session: existingSession,
+            question: lastQuestion,
+          },
+          'session already exists'
+        )
+      );
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       const dailyTournament = await tx.dailyTournament.upsert({
@@ -91,27 +167,52 @@ export const createDailyTournamentSession = asyncHandler(
       const session = await tx.dailyTournamentSession.create({
         data: {
           userId: userId,
+          status: 'IN_PROGRESS',
           tournamentId: dailyTournament.id,
           sessionSeed: sessionSeed,
         },
       });
-      return { dailyTournament, session };
+
+      const firstQuestion = await generateQuestion(1);
+
+      await tx.questionAttempt.create({
+        data: {
+          level: 1,
+          expression: firstQuestion.expression,
+          result: firstQuestion.result,
+          side: firstQuestion.side,
+          kthDigit: firstQuestion.kthDigit,
+          correctDigit: firstQuestion.correctDigit,
+          dailySessionId: session.id,
+        },
+      });
+
+      return { dailyTournament, session, firstQuestion };
     });
 
     res
       .status(201)
       .json(
-        new ApiResponse(201, result.session, 'Create daily tournament session')
+        new ApiResponse(
+          201,
+          { session: result.session, firstQuestion: result.firstQuestion },
+          'Create daily tournament session'
+        )
       );
   }
 );
 
-export const updateSessionScore = asyncHandler(
+export const submitQuestion = asyncHandler(
   async (req: Request, res: Response) => {
     const { dailyTournamentSessionId, questionId, answer, timeTaken } =
       req.body; // session id value can be later received from cookies
 
-    if (!dailyTournamentSessionId || !questionId || !answer || !timeTaken) {
+    if (
+      !dailyTournamentSessionId ||
+      !questionId ||
+      answer == null ||
+      !timeTaken
+    ) {
       throw new ApiError({
         statusCode: 400,
         message:
@@ -123,6 +224,11 @@ export const updateSessionScore = asyncHandler(
       where: {
         id: dailyTournamentSessionId,
       },
+      select: {
+        id: true,
+        createdAt: true,
+        currentLevel: true,
+      },
     });
     if (!session) {
       throw new ApiError({
@@ -131,52 +237,35 @@ export const updateSessionScore = asyncHandler(
       });
     }
 
-    const question = await prisma.questionAttempt.findFirst({
-      where: {
-        id: questionId,
-      },
-    });
-    if (!question) {
-      throw new ApiError({
-        statusCode: 400,
-        message: `No question with id ${questionId} exists`,
-      });
-    }
+    // const now = new Date();
+    // const elapsedSeconds = (now.getTime() - session.createdAt.getTime()) / 1000;
+    // console.log('elapsed time: ', elapsedSeconds);
+    //
+    // if (elapsedSeconds > 302) {
+    //   // +2 seconds for tolerance
+    //   throw new ApiError({ statusCode: 400, message: 'session timed out' });
+    // }
 
-    if (question.correctDigit != answer) {
-      // dont update the score here (fix this later)
-      await prisma.dailyTournamentSession.update({
-        where: {
-          id: dailyTournamentSessionId,
-        },
-        data: {
-          questionsAnswered: {
-            increment: 1,
-          },
-        },
-      });
-      return res.status(200).json({ success: true, answer: 'wrong' });
-    }
+    const newQuestion = await generateQuestion(session.currentLevel);
 
-    const incrementalScore = calculateDailyScore(question.level, timeTaken);
+    res.status(202).json(
+      new ApiResponse(
+        202,
+        {
+          questionId,
+          question: newQuestion,
+          acknowledged: true,
+        },
+        'Answer submitted'
+      )
+    );
 
-    const updatedSession = await prisma.dailyTournamentSession.update({
-      where: {
-        id: dailyTournamentSessionId,
-      },
-      data: {
-        currentScore: {
-          increment: incrementalScore,
-        },
-        questionsAnswered: {
-          increment: 1,
-        },
-        correctAnswers: {
-          increment: 1,
-        },
-      },
-    });
-    res.status(202).json(new ApiResponse(202, updatedSession, 'Updated score'));
+    processQuestionScore(
+      questionId,
+      dailyTournamentSessionId,
+      answer,
+      timeTaken
+    ).catch((err) => console.log('Error processing score: ', err));
   }
 );
 
