@@ -4,7 +4,6 @@ import prisma from '../prisma';
 import { asyncHandler } from '../middlewares/asyncHandler';
 import { ApiError } from '../utils/api/ApiError';
 import { generateSeed } from '../utils/seed.utils';
-import { calculateDailyScore } from '../utils/score.utils';
 import { UserTournamentStatus } from '../generated/prisma';
 import { generateQuestion } from '../utils/question.utils';
 import { processQuestionScore } from '../helpers/daily.helper';
@@ -173,16 +172,16 @@ export const createDailyTournamentSession = asyncHandler(
         },
       });
 
-      const firstQuestion = await generateQuestion(1);
+      const generateFirstQuestion = await generateQuestion(1);
 
-      await tx.questionAttempt.create({
+      const firstQuestion = await tx.questionAttempt.create({
         data: {
           level: 1,
-          expression: firstQuestion.expression,
-          result: firstQuestion.result,
-          side: firstQuestion.side,
-          kthDigit: firstQuestion.kthDigit,
-          correctDigit: firstQuestion.correctDigit,
+          expression: generateFirstQuestion.expression,
+          result: generateFirstQuestion.result,
+          side: generateFirstQuestion.side,
+          kthDigit: generateFirstQuestion.kthDigit,
+          correctDigit: generateFirstQuestion.correctDigit,
           dailySessionId: session.id,
         },
       });
@@ -236,24 +235,28 @@ export const submitQuestion = asyncHandler(
         message: `Session with id ${dailyTournamentSessionId} does not exists`,
       });
     }
+    const newGeneratedQuestion = await generateQuestion(session.currentLevel);
 
-    // const now = new Date();
-    // const elapsedSeconds = (now.getTime() - session.createdAt.getTime()) / 1000;
-    // console.log('elapsed time: ', elapsedSeconds);
-    //
-    // if (elapsedSeconds > 302) {
-    //   // +2 seconds for tolerance
-    //   throw new ApiError({ statusCode: 400, message: 'session timed out' });
-    // }
-
-    const newQuestion = await generateQuestion(session.currentLevel);
+    console.time('createquestionattempt');
+    const newQuestion = await prisma.questionAttempt.create({
+      data: {
+        level: 1,
+        expression: newGeneratedQuestion.expression,
+        result: newGeneratedQuestion.result,
+        side: newGeneratedQuestion.side,
+        kthDigit: newGeneratedQuestion.kthDigit,
+        correctDigit: newGeneratedQuestion.correctDigit,
+        dailySessionId: session.id,
+      },
+    });
+    console.timeEnd('createquestionattempt');
 
     res.status(202).json(
       new ApiResponse(
         202,
         {
           questionId,
-          question: newQuestion,
+          newQuestion,
           acknowledged: true,
         },
         'Answer submitted'

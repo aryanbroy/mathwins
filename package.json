@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/aryanbroy/mathwins#readme",
   "dependencies": {
+    "@prisma/adapter-pg": "^7.1.0",
     "@prisma/client": "^6.19.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

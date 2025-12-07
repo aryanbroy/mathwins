@@ -15,7 +15,6 @@ export const processQuestionScore = async (
     },
     select: {
       correctDigit: true,
-      level: true,
     },
   });
   if (!question) {
@@ -29,10 +28,10 @@ export const processQuestionScore = async (
 
   const incrementalScore = calculateDailyScore(
     answer,
-    question.level,
+    question.correctDigit,
     timeTaken
   );
-  await prisma.dailyTournamentSession.update({
+  const updatedSession = await prisma.dailyTournamentSession.update({
     where: {
       id: dailyTournamentSessionId,
     },
@@ -51,5 +50,8 @@ export const processQuestionScore = async (
       },
     },
   });
-  console.log('score evaluation completed');
+  console.log(
+    'score evaluation completed, score: ',
+    updatedSession.currentScore
+  );
 };

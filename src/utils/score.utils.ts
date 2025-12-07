@@ -6,12 +6,13 @@ const calculateBasePoints = (level: number, answer: number): number => {
 
 export const calculateDailyScore = (
   userAns: number,
-  basePoints: number,
+  correctAnswer: number,
   timeTaken: number
 ) => {
-  // according to the scroll wheel
-  // only needed in daily tournament
-  return 10;
+  const diff = Math.abs(correctAnswer - userAns);
+  const score = 10 - diff;
+  const totalScore = score + (10000 - timeTaken) / 10000;
+  return totalScore;
 };
 export const calculateSoloScore = (
   correctAnswer: number,
