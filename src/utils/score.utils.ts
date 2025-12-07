@@ -14,15 +14,7 @@ export const calculateDailyScore = (
   const totalScore = score + (10000 - timeTaken) / 10000;
   return totalScore;
 };
-export const calculateSoloScore = (
-  correctAnswer: number,
-  questionAttempt: number
-) => {
-  return 10;
-};
-export const calculateSoloPoint = (score: number) => {
-  return 10;
-};
+
 export const calculateSoloCoinPoint = () => {
   return 10;
 };

@@ -2,10 +2,10 @@ import { Request, Response } from 'express';
 import prisma from '../prisma';
 import gameConfig from '../utils/game.config';
 import { ApiResponse } from '../utils/api/ApiResponse';
-import { generateQuestion, generateQuestions } from '../utils/question.utils';
+import { generateQuestion } from '../utils/question.utils';
 import { generateSeed } from '../utils/seed.utils';
 import { ApiError } from '../utils/api/ApiError';
-import { calculateSoloScore, calculateSoloPoint, calculateSoloCoinPoint } from '../utils/score.utils';
+import { calculateSoloCoinPoint } from '../utils/score.utils';
 
 type QuestionData = {
   expression: string;
@@ -139,7 +139,7 @@ export const continueSolo = async (req: Request, res: Response) => {
       where: { id: soloId },
       data: {
         bankedPoints: {
-          increment: session.currentRound * 0.03,
+          increment: session.currentRound * gameConfig.single_player.points_per_round_factor,
         },
         questions: {
           create: {
@@ -217,7 +217,7 @@ export const quitSolo  = async (req: Request, res: Response) => {
     // - Calculate final score (no penalty for quitting after round)
     // - finalScore = session.bankedPoints
     const roundsCompleted = session.questionsAnswered / gameConfig.single_player.round_size;
-    const finalPoint = session.bankedPoints + (roundsCompleted * 0.03);
+    const finalPoint = session.bankedPoints + (roundsCompleted * gameConfig.single_player.points_per_round_factor);
 
     const updatedSoloSession = await prisma.soloSession.update({
       where: {
@@ -457,7 +457,7 @@ export const finalSessionSubmission  = async (req: Request, res: Response) => {
       finalPoint = Math.floor(session.bankedPoints / 2);
       midRoundPenalty = true;
     } else {
-      finalPoint = session.currentRound * 0.03;
+      finalPoint = session.currentRound * gameConfig.single_player.points_per_round_factor;
     }
   
     const totalQuestions = session.questionsAnswered;
@@ -488,6 +488,6 @@ export const finalSessionSubmission  = async (req: Request, res: Response) => {
   }
 }
 
-export const minuiteLeaderboard  = async (req: Request, res: Response) => {
-
+export const leaderboard  = async (req: Request, res: Response) => {
+   // 
 }
