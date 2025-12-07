@@ -488,6 +488,178 @@ export const finalSessionSubmission  = async (req: Request, res: Response) => {
   }
 }
 
-export const leaderboard  = async (req: Request, res: Response) => {
-   // 
+function mapPercentileToPoints(distribution: { range: string; points: number }[], percentile: number) {
+  if (!distribution || distribution.length === 0) {
+    // fallback mapping if no config found
+    if (percentile <= 1) return 30;
+    if (percentile <= 5) return 20;
+    if (percentile <= 10) return 15;
+    if (percentile <= 20) return 10;
+    if (percentile <= 50) return 5;
+    if (percentile <= 75) return 2;
+    return 1;
+  }
+
+  // iterate through config buckets and check which range contains percentile
+  for (const bucket of distribution) {
+    const r = bucket.range.trim();
+    if (r.includes("-")) {
+      const [minStr, maxStr] = r.split("-");
+      const min = parseFloat(minStr);
+      const max = parseFloat(maxStr);
+      if (percentile >= min && percentile <= max) return bucket.points;
+    } else {
+      // if single number like "1", treat as 0..1%
+      const val = parseFloat(r);
+      if (percentile >= 0 && percentile <= val) return bucket.points;
+    }
+  }
+
+  // fallback to last entry's points or 0
+  return distribution[distribution.length - 1]?.points ?? 0;
 }
+
+/**
+ * Convert "YYYY-MM-DD" to a Date range in IST: [start, end)
+ * This makes queries for "that date" consistent with IST boundaries.
+ */
+function getIstRange(dateStr: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) throw new Error("Invalid date format; use YYYY-MM-DD");
+  // Create an ISO string with +05:30 timezone; JS Date will parse it
+  const start = new Date(`${dateStr}T00:00:00+05:30`);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1); // next day at 00:00 IST
+  return { start, end };
+}
+
+export const leaderboard = async (req: Request, res: Response) => {
+  try {
+    const { todayDate } = req.body;
+    if (!todayDate) return res.status(400).json({ ok: false, error: "todayDate required in body" });
+
+    // 1) compute IST day range
+    let start: Date, end: Date;
+    try {
+      ({ start, end } = getIstRange(todayDate));
+    } catch (e: any) {
+      return res.status(400).json({ ok: false, error: e.message });
+    }
+
+    // 2) load active config to get single_player distribution
+    const configRow = gameConfig;
+    const distribution = configRow?.points_distribution?.single_player_distribution ?? [];
+
+    // 3) fetch all finished SoloSessions for that date with a finalScore
+    //    We only select needed fields to keep the query small
+    const sessions = await prisma.soloSession.findMany({
+      where: {
+        date: { gte: start, lt: end },
+        finalScore: { not: null },
+        // adjust statuses to your project's finished enum values
+        status: { in: ["COMPLETED"] }
+      },
+      select: {
+        id: true,
+        userId: true,
+        finalScore: true,
+        updatedAt: true, // used for tie-breaks (earlier wins)
+        endedAt: true
+      }
+    });
+    console.log("sessions :- ",sessions);
+    
+
+    // 4) if no sessions, return early
+    if (!sessions.length) {
+      return res.status(200).json({ ok: true, generated: 0, message: "No sessions found for this date" });
+    }
+
+    // 5) group sessions by userId and pick best finalScore per user
+    //    tie-break rule: if scores equal, earlier updatedAt wins
+    const bestByUser = new Map<string, { score: number; updatedAt?: Date | null; endedAt?: Date | null }>();
+    for (const s of sessions) {
+      const uid = s.userId;
+      const score = typeof s.finalScore === "number" ? s.finalScore : parseFloat(String(s.finalScore));
+      const cur = bestByUser.get(uid);
+      if (!cur) {  
+        bestByUser.set(uid, { score, updatedAt: s.updatedAt, endedAt: s.endedAt });
+      } else {
+        if (score > cur.score) {
+          bestByUser.set(uid, { score, updatedAt: s.updatedAt, endedAt: s.endedAt });
+        } else if (score === cur.score) {
+          // tie -> choose earlier updatedAt
+          const curT = cur.updatedAt ? new Date(cur.updatedAt).getTime() : 0;
+          const newT = s.updatedAt ? new Date(s.updatedAt).getTime() : 0;
+          if (newT < curT) {
+            bestByUser.set(uid, { score, updatedAt: s.updatedAt, endedAt: s.endedAt });
+          } else if (newT === curT) {
+            // extra tie-break
+            const curE = cur.endedAt ? new Date(cur.endedAt).getTime() : 0;
+            const newE = s.endedAt ? new Date(s.endedAt).getTime() : 0;
+            if (newE < curE) bestByUser.set(uid, { score, updatedAt: s.updatedAt, endedAt: s.endedAt });
+          }
+        }
+      }
+    }
+
+    // 6) turn map into array and sort by score desc, updatedAt asc
+    const rows = Array.from(bestByUser.entries()).map(([userId, v]) => ({
+      userId,
+      score: v.score,
+      updatedAt: v.updatedAt,
+      endedAt: v.endedAt
+    }));
+
+    rows.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;        // higher score first
+      const aUpd = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const bUpd = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      if (aUpd !== bUpd) return aUpd - bUpd;                  // earlier update (smaller time) first
+      const aEnd = a.endedAt ? new Date(a.endedAt).getTime() : 0;
+      const bEnd = b.endedAt ? new Date(b.endedAt).getTime() : 0;
+      return aEnd - bEnd;                                     // earlier end if still tied
+    });
+
+    // 7) compute rank, percentile and coinPoints; prepare upsert ops
+    const totalPlayers = rows.length;
+    const dateOnly = start.toISOString().slice(0, 10); // YYYY-MM-DD
+    const upsertOps = [];
+    const results = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const rank = i + 1;
+      const percentile = (rank / totalPlayers) * 100;
+      const coinPoints = mapPercentileToPoints(distribution, percentile);
+
+      results.push({ userId: rows[i].userId, score: rows[i].score, rank, percentile, coinPoints });
+
+      // add to soloLeaderboard, id = userId_YYYY-MM-DD
+      const deterministicId = `${rows[i].userId}_${dateOnly}`;
+      upsertOps.push(
+        prisma.soloLeaderboard.upsert({
+          where: { id: deterministicId },
+          create: {
+            id: deterministicId,
+            date: start,
+            userId: rows[i].userId,
+            score: rows[i].score,
+            rank,
+            percentile,
+            coinPoints
+          },
+          update: {
+            score: rows[i].score,
+            rank,
+            percentile,
+            coinPoints
+          }
+        })
+      );
+    }
+    return res.status(200).json({ ok: true, generated: results.length, results });
+
+  } catch (err) {
+    console.error("[solo leaderboard] error:", err);
+    return res.status(500).json({ ok: false, error: "Internal server error" });
+  }
+};

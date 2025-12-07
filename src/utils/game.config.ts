@@ -80,6 +80,14 @@ const gameConfig = {
   // Note: `range` strings are percentiles or range descriptors. Keep consistent.
   points_distribution: {
     min_participants_for_percentiles: 50,   // fallback to rank-based if participants < this
+    single_player_distribution: [
+      { range: "0-1", points: 30 },
+      { range: "1-5", points: 20 },
+      { range: "5-10", points: 15 },
+      { range: "10-20", points: 10 },
+      { range: "20-50", points: 5 },
+      { range: "50-100", points: 1 },
+    ],    
     daily_points_distribution: [
       { range: "0-1", points: 30 },    // top 0-1% get 30 CP (matches PRD example tables)
       { range: "1-2", points: 20 },

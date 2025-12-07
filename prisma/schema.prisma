@@ -274,3 +274,18 @@ model InstantParticipant {
   @@unique([tournamentId, userId])
   @@index([userId, joinedAt])
 }
+
+model SoloLeaderboard {
+  id         String   @id @default(cuid())
+  date       DateTime @db.Date
+  userId     String
+  score      Float
+  rank       Int
+  percentile Float
+  coinPoints Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([date])
+  @@unique([userId, date])
+}
