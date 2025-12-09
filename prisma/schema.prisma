@@ -143,6 +143,7 @@ model DailyTournamentSession {
   currentLevel      Int                  @default(1)
   questionsAnswered Int                  @default(0)
   correctAnswers    Int                  @default(0)
+  endsAt            DateTime
 
   questions QuestionAttempt[]
 
@@ -286,6 +287,6 @@ model SoloLeaderboard {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@index([date])
   @@unique([userId, date])
+  @@index([date])
 }
