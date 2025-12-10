@@ -23,6 +23,7 @@ export const startSolo = async (req: Request, res: Response) => {
       // Remove answer (correctDigit)
       // send Qs-set to Frontend
       // 
+      // console.log(req.body);
       
       const { userId } = req.body;
       const totalQuestionsInRun = gameConfig.single_player.round_size;
@@ -41,9 +42,9 @@ export const startSolo = async (req: Request, res: Response) => {
         },
       });
       if (updatedUser.soloAttemptCount >= freeAttemptsAllowed) {
-        res
+        return res
           .status(501)
-          .send(new ApiResponse(501, 'No Free Attempt Available for Today'));
+          .send('No Free Attempt Available for Today');
       }
       let question: QuestionData;
       question = await generateQuestion(1);
@@ -67,12 +68,31 @@ export const startSolo = async (req: Request, res: Response) => {
             },
           },
         },
+        include: {
+          questions: {
+            select: {
+              id: true,
+              level: true,
+              expression: true,
+              result: true,
+              side: true,
+              kthDigit: true,
+              correctDigit: true,
+            },
+          },
+        },
       });
-  
-      const { correctDigit, result, ...clientSafeQuestion } = question;
+      
+      const sanitizedAttemp = {
+        id: newAttempt.id,
+        userId: newAttempt.userId,
+      }
+      const createdQuestion = newAttempt.questions[0];
+      const { correctDigit, result, ...clientSafeQuestion } = createdQuestion;
+      // const sanitizedQuestion = {...clientSafeQuestion, questionId: createdQuestion.id};
       const sanitizedQuestion = clientSafeQuestion;
-  
-      return res.status(201).json({sanitizedQuestion, newAttempt});
+      
+      return res.status(201).json({sanitizedQuestion, sanitizedAttemp});
     } catch (error) {
       console.error('start Solo error:', error);
       return res
@@ -83,11 +103,11 @@ export const startSolo = async (req: Request, res: Response) => {
 
 export const continueSolo = async (req: Request, res: Response) => {
   try {
-    const {userId, soloId} = req.body;
-    if(!userId || !soloId){
+    const {userId, soloSessionId} = req.body;
+    if(!userId || !soloSessionId){
       throw new ApiError({
           statusCode: 400,
-          message: 'invalid userId, soloId',
+          message: 'invalid userId, soloSessionId',
       });
     }
     const user = await prisma.user.findFirst({
@@ -103,7 +123,7 @@ export const continueSolo = async (req: Request, res: Response) => {
     }
     const session = await prisma.soloSession.findFirst({
       where: {
-        id: soloId,
+        id: soloSessionId,
       },
       include: { 
         questions: true 
@@ -131,12 +151,13 @@ export const continueSolo = async (req: Request, res: Response) => {
     const currentLevel = session.currentLevel;
     const questionsAnswered = session.questionsAnswered;
     const roundsCompleted = Math.floor(questionsAnswered / roundSize); 
-    let newLevel = currentLevel + Math.floor(roundsCompleted / levelIncrementEvery) + 1;
+    // let newLevel = currentLevel + Math.floor(roundsCompleted / levelIncrementEvery) + 1;
+    let newLevel = Math.floor(questionsAnswered / levelIncrementEvery) + 1;
     newLevel = newLevel < 5 ? newLevel : 5; 
     
     const question = await generateQuestion(newLevel);
     const updatedSession = await prisma.soloSession.update({
-      where: { id: soloId },
+      where: { id: soloSessionId },
       data: {
         bankedPoints: {
           increment: session.currentRound * gameConfig.single_player.points_per_round_factor,
@@ -155,11 +176,28 @@ export const continueSolo = async (req: Request, res: Response) => {
         currentLevel: newLevel,
         updatedAt: new Date(),
       },
+      include: {
+        questions: {
+          select: {
+            id: true,
+            level: true,
+            expression: true,
+            result: true,
+            side: true,
+            kthDigit: true,
+            correctDigit: true,
+          },
+        },
+      },
     });
     const { correctDigit, result, ...clientSafeQuestion } = question;
-    const sanitizedQuestion = clientSafeQuestion;
+    const questionCount = updatedSession.questions.length;
+    console.log("new Session : ",updatedSession, " len : ",questionCount, " last qs : ", updatedSession.questions[questionCount-1]);
+    const sanitizedQuestion = {...clientSafeQuestion, "id": updatedSession.questions[questionCount-1].id};
+    // const sanitizedQuestion = {...clientSafeQuestion};
     return res.status(200).json({
       message: 'Next round started successfully',
+      isRoundCompleted: false,
       round: updatedSession.currentRound,
       level: updatedSession.currentLevel,
       questions: sanitizedQuestion,
@@ -256,6 +294,8 @@ export const quitSolo  = async (req: Request, res: Response) => {
 export const nextQuestion  = async (req: Request, res: Response) => {
   try {
     const {soloSessionId, userId, questionId, userAnswer, time} = req.body;
+    // console.log("next : ",req.body);
+    
     const today = new Date();
     if(!soloSessionId || !userId || !questionId || (userAnswer === null || userAnswer === undefined) || !time){
       return res.status(400).json({
@@ -335,6 +375,7 @@ export const nextQuestion  = async (req: Request, res: Response) => {
         res.status(201).json({
           success: true,
           isCorrect: true,
+          isRoundCompleted: true,
           roundNumber: updatedSession.currentRound,
           correctAnswer: question.correctDigit,
           message: `${session.currentRound} completed. Select CONTINUE to move ahead.`
@@ -355,13 +396,14 @@ export const nextQuestion  = async (req: Request, res: Response) => {
             correctDigit: nextGeneratedQuestion.correctDigit,
           },
         })
-  
-        const { correctDigit, result, ...clientSafeQuestion } = newNextQuestion;
-        const sanitizedQuestion = clientSafeQuestion;
+        console.log("question created : ", newNextQuestion);
+        const { id, expression, kthDigit, level, side } = newNextQuestion;
+        const sanitizedQuestion = {id,expression,kthDigit,level,side};
       
         return res.json({
           success: true,
           isCorrect: true,
+          isRoundCompleted: false,
           roundNumber: updatedSession.currentRound,
           correctAnswer: question.correctDigit,
           nextQuestion: sanitizedQuestion
@@ -383,8 +425,7 @@ export const nextQuestion  = async (req: Request, res: Response) => {
       });
       // implement urils.api.ApiResponse
       return res.json({
-        success: true,
-        correct: false,
+        success: false,
         gameOver: true,
         reason: 'MISTAKE',
         finalScore: finalScore,
@@ -481,6 +522,7 @@ export const finalSessionSubmission  = async (req: Request, res: Response) => {
       accuracy: accuracy,
       message: 'You can leave this window.',
       sessionEnded: true,
+      success: false,
     })
   } catch (error) {
     console.log('Error in Submission. Try Again ! !');

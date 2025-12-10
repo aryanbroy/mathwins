@@ -1,9 +1,12 @@
 import { Request, Response } from 'express';
 
 export const updateSolo = async (req: Request, res: Response) => {
-    const {  } = req.body;
+    const dataFromclient = req.body;
     try {
-        res.status(200).send("test");
+        // 
+        console.log("req.body : ",dataFromclient);
+        
+        res.status(200).json(dataFromclient);
     } catch (err) {
         console.log(err);
         res.status(400).json({ err });

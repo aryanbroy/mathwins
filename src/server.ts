@@ -31,9 +31,7 @@ import dailyTournamentRouter from './routes/dailyTour.route';
 import soloRouter from './routes/solo.route';
 import instantRouter from './routes/instant.route';
 import { errorHandler } from './middlewares/error.middleware';
-
-import { adminLogin } from './controller/admin/auth.controller';
-import { updateSolo, updateDaily, updateInstant, updateQuestionConfig, updateAddConfig, updateLifeline } from './controller/admin/editconfig.controller';
+import editConfigRouter from './routes/admin/editconfig.route';
 
 app.use('/api/user', userRouter);
 app.use('/api/auth', authRouter);
@@ -42,8 +40,8 @@ app.use('/api/daily', dailyTournamentRouter);
 app.use('/api/solo', soloRouter);
 app.use('/api/instant', instantRouter);
 
-app.use('/api/admin/login', adminLogin);
-app.use('/api/admin/updatesolo', updateSolo);
+// app.use('/api/admin/login', adminLogin);
+app.use('/api/admin/editconfig', editConfigRouter);
 
 app.use(errorHandler);
 
