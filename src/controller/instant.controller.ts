@@ -259,7 +259,8 @@ export const submitFinal = asyncHandler(async (req: Request, res: Response) => {
     const updatedSession = await updateSessionFinalScore(
       tx,
       sessionId,
-      session.score
+      session.score,
+      userId
     );
     if (!updatedSession || !updatedSession.finalScore) {
       throw new ApiError({

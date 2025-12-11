@@ -246,6 +246,7 @@ model InstantSession {
   questions  QuestionAttempt[]
   score      Int               @default(0)
   finalScore Int?
+  bestScore  Int               @default(0)
 
   startedAt   DateTime  @default(now())
   endsAt      DateTime?

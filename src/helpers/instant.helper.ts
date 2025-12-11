@@ -172,11 +172,26 @@ export const updateSessionScore = async (
 export const updateSessionFinalScore = async (
   tx: Prisma.TransactionClient,
   sessionId: string,
-  score: number
+  currentScore: number,
+  userId: string
 ): Promise<InstantSession | null> => {
+  const userSessions = await tx.instantSession.findMany({
+    where: { userId: userId },
+    select: { bestScore: true },
+    orderBy: { finalScore: 'desc' },
+  });
+
+  let currentBestScore = 0;
+  if (userSessions.length > 0) {
+    currentBestScore = userSessions[0].bestScore;
+  }
+
+  const finalScore = currentScore;
+
   const updatedSession = await tx.instantSession.update({
     data: {
-      finalScore: score,
+      finalScore,
+      bestScore: finalScore > currentBestScore ? finalScore : currentBestScore,
     },
     where: {
       id: sessionId,
@@ -275,6 +290,17 @@ export const playersCountHandler = async (
   const firstFivePlayers = await tx.instantParticipant.findMany({
     where: {
       tournamentId: tournamentId,
+    },
+    select: {
+      userId: true,
+      joinedAt: true,
+      joinOrder: true,
+      sessionStarted: true,
+      user: {
+        select: {
+          username: true,
+        },
+      },
     },
     orderBy: {
       joinOrder: 'desc',

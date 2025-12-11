@@ -10,7 +10,6 @@ import {
   Prisma,
 } from '../../generated/prisma';
 import {
-  checkAnswer,
   QuestionValidationType,
   updateSessionScore,
   validExpiryInterval,
