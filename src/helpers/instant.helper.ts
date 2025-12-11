@@ -2,11 +2,7 @@ import {
   MIN_TIME_TO_JOIN,
   MIN_TO_MILLISECONDS,
 } from '../config/instant.config';
-import {
-  InstantSession,
-  InstantTournamentSessionStatus,
-  Prisma,
-} from '../generated/prisma';
+import { InstantSession, Prisma } from '../generated/prisma';
 import prisma from '../prisma';
 import { ApiError } from '../utils/api/ApiError';
 
@@ -243,4 +239,48 @@ export const markSessionAsCompleted = async (
   }
 
   return updatedSession;
+};
+
+export const tournamentIsValid = async (
+  tx: Prisma.TransactionClient,
+  tournamentId: string
+) => {
+  const tournament = await tx.instantTournament.findUnique({
+    where: {
+      id: tournamentId,
+    },
+  });
+
+  if (!tournament) {
+    throw new ApiError({
+      statusCode: 400,
+      message: 'tournament does not exist: invalid tournament id',
+    });
+  }
+};
+
+export const playersCountHandler = async (
+  tx: Prisma.TransactionClient,
+  tournamentId: string
+) => {
+  const playersCount = await tx.instantTournament.findUnique({
+    where: {
+      id: tournamentId,
+    },
+    select: {
+      playersCount: true,
+    },
+  });
+
+  const firstFivePlayers = await tx.instantParticipant.findMany({
+    where: {
+      tournamentId: tournamentId,
+    },
+    orderBy: {
+      joinOrder: 'desc',
+    },
+    take: 3,
+  });
+
+  return { playersCount, firstFivePlayers };
 };

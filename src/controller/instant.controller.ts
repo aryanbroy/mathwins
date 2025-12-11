@@ -18,6 +18,8 @@ import {
   loadSession,
   validateSubmission,
   markSessionAsCompleted,
+  tournamentIsValid,
+  playersCountHandler,
 } from '../helpers/instant.helper';
 import { MAX_ATTEMPT } from '../config/instant.config';
 
@@ -25,6 +27,43 @@ export const testInstant = async (_: Request, res: Response) => {
   console.log('working');
   res.status(200).json({ success: true });
 };
+
+export const getPlayersInTournament = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.userId;
+    if (!userId) {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'Received invalid user id from auth handler',
+      });
+    }
+
+    const { tournamentId } = req.body;
+    if (!tournamentId) {
+      throw new ApiError({ statusCode: 400, message: 'invalid tournament id' });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      await tournamentIsValid(tx, tournamentId);
+      const { playersCount, firstFivePlayers } = await playersCountHandler(
+        tx,
+        tournamentId
+      );
+      return { playersCount, firstFivePlayers };
+    });
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          playersCount: result.playersCount,
+          firstFivePlayers: result.firstFivePlayers,
+        },
+        'successfuly fetched players count'
+      )
+    );
+  }
+);
 
 export const joinOrCreateTournament = asyncHandler(
   async (req: Request, res: Response) => {
