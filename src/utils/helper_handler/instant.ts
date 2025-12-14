@@ -190,8 +190,16 @@ export const submitQuestionHandler = async (
   timeTakenMs: number
 ): Promise<InstantSession> => {
   try {
-    const score = calculateInstantScore(answer, question.level, timeTakenMs);
-    const updatedSession = await updateSessionScore(tx, sessionId, score);
+    const incrementalScore = calculateInstantScore(
+      answer,
+      question.level,
+      timeTakenMs
+    );
+    const updatedSession = await updateSessionScore(
+      tx,
+      sessionId,
+      incrementalScore
+    );
 
     return updatedSession;
   } catch (err) {
@@ -235,4 +243,41 @@ export const finalSubmissionHandler = async (
   });
 
   return updatedSession;
+};
+
+export const playersCountHandler = async (
+  tx: Prisma.TransactionClient,
+  tournamentId: string
+) => {
+  const playersCount = await tx.instantTournament.findUnique({
+    where: {
+      id: tournamentId,
+    },
+    select: {
+      playersCount: true,
+    },
+  });
+
+  const firstFivePlayers = await tx.instantParticipant.findMany({
+    where: {
+      tournamentId: tournamentId,
+    },
+    select: {
+      userId: true,
+      joinedAt: true,
+      joinOrder: true,
+      sessionStarted: true,
+      user: {
+        select: {
+          username: true,
+        },
+      },
+    },
+    orderBy: {
+      joinOrder: 'desc',
+    },
+    take: 3,
+  });
+
+  return { playersCount, firstFivePlayers };
 };
