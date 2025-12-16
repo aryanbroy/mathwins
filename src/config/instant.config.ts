@@ -1,4 +1,4 @@
-export const MAX_ATTEMPT = 10;
+export const MAX_ATTEMPT = 100;
 export const MAX_PLAYERS = 100;
 export const SESSION_DURATION_MIN = 3;
 export const SESSION_BUFF_MIN = 0.5;
