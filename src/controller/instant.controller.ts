@@ -8,8 +8,10 @@ import {
   joinOrCreateRoomHandler,
   listRoomsHandler,
   playersCountHandler,
+  retrieveTournamentHandler,
   startSessionHandler,
   submitQuestionHandler,
+  tournamentLeaderboardHandler,
 } from '../utils/helper_handler/instant';
 import {
   checkActiveSession,
@@ -312,3 +314,55 @@ export const submitFinal = asyncHandler(async (req: Request, res: Response) => {
 
   res.status(200).json(new ApiResponse(200, result, message));
 });
+
+export const allTournaments = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.userId;
+    if (!userId) {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'Received invalid user id from auth handler',
+      });
+    }
+
+    const participatedTournaments = await retrieveTournamentHandler(userId);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          participatedTournaments,
+          'fetched user instant sessions'
+        )
+      );
+  }
+);
+
+export const tournamentLeaderboard = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.userId;
+    if (!userId) {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'Received invalid user id from auth handler',
+      });
+    }
+
+    const { tournamentId } = req.body;
+    if (!tournamentId) {
+      throw new ApiError({
+        statusCode: 404,
+        message: 'Session id not provided',
+      });
+    }
+
+    const leaderboard = await tournamentLeaderboardHandler(tournamentId);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, leaderboard, 'fetched tournament leaderboard')
+      );
+  }
+);

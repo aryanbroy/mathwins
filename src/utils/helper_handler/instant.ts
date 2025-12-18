@@ -232,6 +232,13 @@ export const finalSubmissionHandler = async (
     },
   });
 
+  await tx.$queryRaw`
+    INSERT INTO "InstantLeaderboard" ("id", "tournamentId", "userId", "bestScore", "updatedAt")
+    VALUES (gen_random_uuid(), ${roomId}, ${userId}, ${finalScore}, NOW())
+    ON CONFLICT ("tournamentId", "userId")
+    DO UPDATE SET 
+      "bestScore" = GREATEST("InstantLeaderboard"."bestScore", ${finalScore})`;
+
   const updatedSession = await tx.instantSession.update({
     where: {
       id: sessionId,
@@ -280,4 +287,28 @@ export const playersCountHandler = async (
   });
 
   return { playersCount, firstFivePlayers };
+};
+
+export const retrieveTournamentHandler = async (userId: string) => {
+  const participatedTournaments = await prisma.instantParticipant.findMany({
+    where: { userId },
+    orderBy: {
+      joinedAt: 'desc',
+    },
+  });
+
+  return participatedTournaments;
+};
+
+export const tournamentLeaderboardHandler = async (tournamentId: string) => {
+  const tournaments = await prisma.instantLeaderboard.findMany({
+    where: {
+      tournamentId,
+    },
+    orderBy: {
+      bestScore: 'desc',
+    },
+  });
+
+  return tournaments;
 };
