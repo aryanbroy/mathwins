@@ -1,0 +1,30 @@
+-- CreateTable
+CREATE TABLE "GameConfig" (
+    "id" TEXT NOT NULL,
+    "version" TEXT NOT NULL,
+    "daily_tournament" JSONB NOT NULL,
+    "instant_tournament" JSONB NOT NULL,
+    "single_player" JSONB NOT NULL,
+    "leveling" JSONB NOT NULL,
+    "base_points_by_level" JSONB NOT NULL,
+    "scoring" JSONB NOT NULL,
+    "points_distribution" JSONB NOT NULL,
+    "caps" JSONB NOT NULL,
+    "ad_units" JSONB NOT NULL,
+    "lifelines" JSONB NOT NULL,
+    "top_attempts" JSONB NOT NULL,
+    "feature_flags" JSONB NOT NULL,
+    "safety" JSONB NOT NULL,
+    "referrals" JSONB NOT NULL,
+    "rewards" JSONB NOT NULL,
+    "cron" JSONB NOT NULL,
+    "analytics" JSONB NOT NULL,
+    "leaderboard" JSONB NOT NULL,
+    "qa" JSONB NOT NULL,
+    "updatedBy" TEXT NOT NULL,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "isActive" BOOLEAN NOT NULL DEFAULT false,
+
+    CONSTRAINT "GameConfig_pkey" PRIMARY KEY ("id")
+);
