@@ -290,3 +290,32 @@ model SoloLeaderboard {
   @@unique([userId, date])
   @@index([date])
 }
+
+model GameConfig {
+  id                          String   @id @default(uuid())
+  version                     String
+  daily_tournament            Json
+  instant_tournament          Json
+  single_player               Json
+  leveling                    Json
+  base_points_by_level        Json
+  scoring                     Json
+  points_distribution         Json
+  caps                        Json
+  ad_units                    Json
+  lifelines                   Json
+  top_attempts                Json
+  feature_flags               Json
+  safety                      Json
+  referrals                   Json
+  rewards                     Json
+  cron                        Json
+  analytics                   Json
+  leaderboard                 Json
+  qa                          Json
+  updatedBy                   String
+  notes                       String?
+  createdAt                   DateTime @default(now())
+  isActive                    Boolean  @default(false)
+}
+
