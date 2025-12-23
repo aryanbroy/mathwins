@@ -2,13 +2,10 @@ import {
   MIN_TIME_TO_JOIN,
   MIN_TO_MILLISECONDS,
 } from '../config/instant.config';
-import {
-  InstantSession,
-  InstantTournamentSessionStatus,
-  Prisma,
-} from '../generated/prisma';
+import { InstantSession, InstantTournament, Prisma } from '../generated/prisma';
 import prisma from '../prisma';
 import { ApiError } from '../utils/api/ApiError';
+import { GeneratedQuestion } from '../utils/question.utils';
 
 export type QuestionValidationType = {
   result: string;
@@ -22,15 +19,35 @@ export const validExpiryInterval = (now: Date) => {
   return new Date(now.getTime() + MIN_TIME_TO_JOIN * MIN_TO_MILLISECONDS);
 };
 
-export const checkActiveSession = async (userId: string, roomId: string) => {
+export const checkActiveSession = async (
+  userId: string,
+  roomId: string,
+  now: Date
+) => {
   try {
     const activeSession = await prisma.instantSession.findFirst({
       where: {
         userId: userId,
         tournamentId: roomId,
+        endsAt: { gt: now },
+        status: { not: 'SUBMITTED' },
+      },
+      include: {
+        questions: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1,
+        },
       },
     });
-    return activeSession;
+
+    if (activeSession) {
+      const { questions, ...sessionFields } = activeSession;
+      return { sessionFields, questions };
+    }
+
+    return null;
   } catch (err) {
     throw new ApiError({
       statusCode: 500,
@@ -40,33 +57,20 @@ export const checkActiveSession = async (userId: string, roomId: string) => {
   }
 };
 
-export const checkUserAlreadyInTournament = async (
-  userId: string,
-  roomId: string,
-  now: Date
-): Promise<boolean> => {
+export const fetchTournament = async (
+  roomId: string
+): Promise<{ id: string; expiresAt: Date } | null> => {
   try {
-    const isUserAlreadyInTournament = await prisma.instantTournament.findFirst({
+    const tournament = await prisma.instantTournament.findUnique({
       where: {
         id: roomId,
-        expiresAt: { gt: validExpiryInterval(now) },
       },
-      include: {
-        sessions: {
-          where: {
-            userId: userId,
-          },
-        },
+      select: {
+        id: true,
+        expiresAt: true,
       },
     });
-    if (
-      isUserAlreadyInTournament &&
-      isUserAlreadyInTournament.sessions.length > 0
-    ) {
-      return true;
-    }
-
-    return false;
+    return tournament;
   } catch (err) {
     throw new ApiError({
       statusCode: 500,
@@ -114,7 +118,7 @@ export const loadSession = async (
 export const checkQuestionIsValid = async (
   tx: Prisma.TransactionClient,
   questionId: string
-): Promise<QuestionValidationType | null> => {
+): Promise<QuestionValidationType> => {
   try {
     const isValidQuestion = await tx.questionAttempt.findUnique({
       where: {
@@ -128,6 +132,13 @@ export const checkQuestionIsValid = async (
         level: true,
       },
     });
+    if (!isValidQuestion) {
+      throw new ApiError({
+        statusCode: 404,
+        message: `question: ${questionId}, not found`,
+      });
+    }
+
     return isValidQuestion;
   } catch (err) {
     throw new ApiError({
@@ -154,11 +165,13 @@ export const checkAnswer = (
 export const updateSessionScore = async (
   tx: Prisma.TransactionClient,
   sessionId: string,
-  score: number
+  incrementalScore: number
 ): Promise<InstantSession> => {
   const updatedSession = await tx.instantSession.update({
     data: {
-      score: score,
+      score: {
+        increment: incrementalScore,
+      },
     },
     where: {
       id: sessionId,
@@ -176,11 +189,30 @@ export const updateSessionScore = async (
 export const updateSessionFinalScore = async (
   tx: Prisma.TransactionClient,
   sessionId: string,
-  score: number
+  currentScore: number,
+  userId: string
 ): Promise<InstantSession | null> => {
+  console.log('Userid: ', userId);
+  console.log('finding user sessions...');
+  const userSessions = await tx.instantSession.findMany({
+    where: { userId: userId, status: 'SUBMITTED' },
+    select: { bestScore: true },
+    orderBy: { finalScore: 'desc' },
+  });
+  console.log('User sessions: ', userSessions);
+
+  let currentBestScore = 0;
+  if (userSessions.length > 0) {
+    currentBestScore = userSessions[0].bestScore;
+    console.log('Current best score: ', currentBestScore);
+  }
+
+  const finalScore = currentScore;
+
   const updatedSession = await tx.instantSession.update({
     data: {
-      finalScore: score,
+      finalScore,
+      bestScore: finalScore > currentBestScore ? finalScore : currentBestScore,
     },
     where: {
       id: sessionId,
@@ -243,4 +275,43 @@ export const markSessionAsCompleted = async (
   }
 
   return updatedSession;
+};
+
+export const tournamentIsValid = async (
+  tx: Prisma.TransactionClient,
+  tournamentId: string
+) => {
+  const tournament = await tx.instantTournament.findUnique({
+    where: {
+      id: tournamentId,
+    },
+  });
+
+  if (!tournament) {
+    throw new ApiError({
+      statusCode: 400,
+      message: 'tournament does not exist: invalid tournament id',
+    });
+  }
+  return tournament;
+};
+
+export const storeQuestion = async (
+  tx: Prisma.TransactionClient,
+  question: GeneratedQuestion,
+  sessionId: string
+) => {
+  const storedQuestion = await tx.questionAttempt.create({
+    data: {
+      level: 1,
+      expression: question.expression,
+      result: question.result,
+      side: question.side,
+      kthDigit: question.kthDigit,
+      correctDigit: question.correctDigit,
+      instantSessionId: sessionId,
+    },
+  });
+
+  return storedQuestion;
 };

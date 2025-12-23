@@ -10,7 +10,6 @@ import {
   Prisma,
 } from '../../generated/prisma';
 import {
-  checkAnswer,
   QuestionValidationType,
   updateSessionScore,
   validExpiryInterval,
@@ -191,8 +190,16 @@ export const submitQuestionHandler = async (
   timeTakenMs: number
 ): Promise<InstantSession> => {
   try {
-    const score = calculateInstantScore(answer, question.level, timeTakenMs);
-    const updatedSession = await updateSessionScore(tx, sessionId, score);
+    const incrementalScore = calculateInstantScore(
+      answer,
+      question.level,
+      timeTakenMs
+    );
+    const updatedSession = await updateSessionScore(
+      tx,
+      sessionId,
+      incrementalScore
+    );
 
     return updatedSession;
   } catch (err) {
@@ -225,6 +232,13 @@ export const finalSubmissionHandler = async (
     },
   });
 
+  await tx.$queryRaw`
+    INSERT INTO "InstantLeaderboard" ("id", "tournamentId", "userId", "bestScore", "updatedAt")
+    VALUES (gen_random_uuid(), ${roomId}, ${userId}, ${finalScore}, NOW())
+    ON CONFLICT ("tournamentId", "userId")
+    DO UPDATE SET 
+      "bestScore" = GREATEST("InstantLeaderboard"."bestScore", ${finalScore})`;
+
   const updatedSession = await tx.instantSession.update({
     where: {
       id: sessionId,
@@ -236,4 +250,65 @@ export const finalSubmissionHandler = async (
   });
 
   return updatedSession;
+};
+
+export const playersCountHandler = async (
+  tx: Prisma.TransactionClient,
+  tournamentId: string
+) => {
+  const playersCount = await tx.instantTournament.findUnique({
+    where: {
+      id: tournamentId,
+    },
+    select: {
+      playersCount: true,
+    },
+  });
+
+  const firstFivePlayers = await tx.instantParticipant.findMany({
+    where: {
+      tournamentId: tournamentId,
+    },
+    select: {
+      userId: true,
+      joinedAt: true,
+      joinOrder: true,
+      sessionStarted: true,
+      user: {
+        select: {
+          username: true,
+        },
+      },
+    },
+    orderBy: {
+      joinOrder: 'desc',
+    },
+    take: 3,
+  });
+
+  return { playersCount, firstFivePlayers };
+};
+
+export const retrieveTournamentHandler = async (userId: string) => {
+  const participatedTournaments = await prisma.instantParticipant.findMany({
+    where: { userId },
+    orderBy: {
+      joinedAt: 'desc',
+    },
+  });
+
+  return participatedTournaments;
+};
+
+export const tournamentLeaderboardHandler = async (tournamentId: string) => {
+  const tournaments = await prisma.instantLeaderboard.findMany({
+    where: {
+      tournamentId,
+    },
+    orderBy: {
+      bestScore: 'desc',
+    },
+  });
+
+  return tournaments;
 };

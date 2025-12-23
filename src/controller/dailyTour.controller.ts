@@ -6,6 +6,7 @@ import { ApiError } from '../utils/api/ApiError';
 import { generateSeed } from '../utils/seed.utils';
 import { generateQuestion } from '../utils/question.utils';
 import {
+  leaderBoardHandler,
   markDailyTounamentComplete,
   processQuestionScore,
   submitSession,
@@ -318,5 +319,23 @@ export const minuteScoreUpdate = asyncHandler(
     console.log(minute);
 
     res.status(200).json({ sucess: true });
+  }
+);
+
+export const getDailyLeaderboard = asyncHandler(
+  async (req: Request, res: Response) => {
+    let { page } = req.query;
+    if (!page) page = '1';
+
+    let pageNum = Number(page);
+    if (pageNum <= 0) {
+      pageNum = 1;
+    }
+
+    const leaderboardUsers = await leaderBoardHandler(pageNum);
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, { leaderBoard: leaderboardUsers }));
   }
 );

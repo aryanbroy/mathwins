@@ -7,24 +7,67 @@ import {
   finalSubmissionHandler,
   joinOrCreateRoomHandler,
   listRoomsHandler,
+  playersCountHandler,
+  retrieveTournamentHandler,
   startSessionHandler,
   submitQuestionHandler,
+  tournamentLeaderboardHandler,
 } from '../utils/helper_handler/instant';
 import {
   checkActiveSession,
   checkQuestionIsValid,
-  checkUserAlreadyInTournament,
   updateSessionFinalScore,
   loadSession,
   validateSubmission,
   markSessionAsCompleted,
+  tournamentIsValid,
+  fetchTournament,
+  storeQuestion,
 } from '../helpers/instant.helper';
 import { MAX_ATTEMPT } from '../config/instant.config';
+import { generateQuestion } from '../utils/question.utils';
 
 export const testInstant = async (_: Request, res: Response) => {
   console.log('working');
   res.status(200).json({ success: true });
 };
+
+export const getPlayersInTournament = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.userId;
+    if (!userId) {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'Received invalid user id from auth handler',
+      });
+    }
+
+    const { tournamentId } = req.body;
+    if (!tournamentId) {
+      throw new ApiError({ statusCode: 400, message: 'invalid tournament id' });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      await tournamentIsValid(tx, tournamentId);
+      const { playersCount, firstFivePlayers } = await playersCountHandler(
+        tx,
+        tournamentId
+      );
+      return { playersCount, firstFivePlayers };
+    });
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          playersCount: result.playersCount,
+          firstFivePlayers: result.firstFivePlayers,
+        },
+        'successfuly fetched players count'
+      )
+    );
+  }
+);
 
 export const joinOrCreateTournament = asyncHandler(
   async (req: Request, res: Response) => {
@@ -68,30 +111,46 @@ export const startSession = asyncHandler(
       throw new ApiError({ statusCode: 404, message: 'Room id not provided' });
     }
 
-    const activeSession = await checkActiveSession(userId, roomId);
-    if (activeSession) {
-      return res.status(200).json(new ApiResponse(200, activeSession));
-    }
-
     const now = new Date();
-    const isUserAlreadyInTournament = await checkUserAlreadyInTournament(
-      userId,
-      roomId,
-      now
-    );
-    if (isUserAlreadyInTournament) {
-      throw new ApiError({
-        statusCode: 403,
-        message: 'User already in a tournament',
-      });
+    const tournament = await fetchTournament(roomId);
+    if (!tournament) {
+      throw new ApiError({ statusCode: 404, message: 'room not found' });
+    }
+    if (tournament.expiresAt < now) {
+      throw new ApiError({ statusCode: 403, message: 'room closed' });
+    }
+    const activeSession = await checkActiveSession(userId, roomId, now);
+    if (activeSession != null) {
+      return res.status(200).json(
+        new ApiResponse(
+          200,
+          {
+            session: activeSession.sessionFields,
+            question: activeSession.questions[0],
+          },
+          'session already exists'
+        )
+      );
     }
 
     const result = await prisma.$transaction(async (tx) => {
       const session = await startSessionHandler(tx, userId, roomId);
-      return session;
+
+      const question = await generateQuestion(1);
+      const firstQuestion = await storeQuestion(tx, question, session.id);
+
+      return { session, firstQuestion };
     });
 
-    res.status(201).json(new ApiResponse(201, result, 'session started'));
+    res
+      .status(201)
+      .json(
+        new ApiResponse(
+          201,
+          { session: result.session, question: result.firstQuestion },
+          'session started'
+        )
+      );
   }
 );
 
@@ -149,13 +208,10 @@ export const submitQuestion = asyncHandler(
         throw new ApiError({ statusCode: 400, message: 'session expired' });
       }
 
-      const question = await checkQuestionIsValid(tx, questionId);
-      if (!question) {
-        throw new ApiError({
-          statusCode: 404,
-          message: `question: ${questionId}, not found`,
-        });
-      }
+      await checkQuestionIsValid(tx, questionId);
+
+      const generatedQuestion = await generateQuestion(1);
+      const question = await storeQuestion(tx, generatedQuestion, session.id);
 
       const updatedSession = await submitQuestionHandler(
         tx,
@@ -164,12 +220,19 @@ export const submitQuestion = asyncHandler(
         answer,
         timeTakenMs
       );
-      return updatedSession;
+
+      return { updatedSession, question };
     });
 
     res
       .status(200)
-      .json(new ApiResponse(200, result, 'question submitted successfuly'));
+      .json(
+        new ApiResponse(
+          200,
+          { session: result.updatedSession, question: result.question },
+          'question submitted successfuly'
+        )
+      );
   }
 );
 
@@ -220,7 +283,8 @@ export const submitFinal = asyncHandler(async (req: Request, res: Response) => {
     const updatedSession = await updateSessionFinalScore(
       tx,
       sessionId,
-      session.score
+      session.score,
+      userId
     );
     if (!updatedSession || !updatedSession.finalScore) {
       throw new ApiError({
@@ -250,3 +314,55 @@ export const submitFinal = asyncHandler(async (req: Request, res: Response) => {
 
   res.status(200).json(new ApiResponse(200, result, message));
 });
+
+export const allTournaments = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.userId;
+    if (!userId) {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'Received invalid user id from auth handler',
+      });
+    }
+
+    const participatedTournaments = await retrieveTournamentHandler(userId);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          participatedTournaments,
+          'fetched user instant sessions'
+        )
+      );
+  }
+);
+
+export const tournamentLeaderboard = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.userId;
+    if (!userId) {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'Received invalid user id from auth handler',
+      });
+    }
+
+    const { tournamentId } = req.body;
+    if (!tournamentId) {
+      throw new ApiError({
+        statusCode: 404,
+        message: 'Session id not provided',
+      });
+    }
+
+    const leaderboard = await tournamentLeaderboardHandler(tournamentId);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, leaderboard, 'fetched tournament leaderboard')
+      );
+  }
+);

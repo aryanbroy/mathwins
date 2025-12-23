@@ -93,43 +93,87 @@ export const submitSession = async (
   userId: string,
   endedAt = new Date()
 ) => {
-  const session = await prisma.dailyTournamentSession.findFirst({
-    where: {
-      id: sessionId,
-    },
-  });
-  if (!session) {
-    throw new ApiError({ statusCode: 400, message: 'Invalid session id' });
-  }
+  const result = await prisma.$transaction(async (tx) => {
+    const session = await tx.dailyTournamentSession.findFirst({
+      where: {
+        id: sessionId,
+      },
+    });
+    if (!session) {
+      throw new ApiError({ statusCode: 400, message: 'Invalid session id' });
+    }
 
-  const userSessions = await prisma.dailyTournamentSession.findMany({
+    const finalScore = session.currentScore;
+
+    const updatedSession = await tx.dailyTournamentSession.update({
+      where: {
+        id: sessionId,
+      },
+      data: {
+        endedAt,
+        status: UserTournamentStatus.COMPLETED,
+        finalScore,
+      },
+    });
+
+    const now = new Date();
+    const tournamentStartDate = new Date(
+      Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+    );
+
+    await tx.dailyLeaderboard.upsert({
+      where: {
+        date_userId: {
+          userId,
+          date: tournamentStartDate,
+        },
+      },
+      update: {
+        bestScore: {
+          set: finalScore,
+        },
+        updatedAt: now,
+      },
+      create: {
+        date: tournamentStartDate,
+        userId,
+        bestScore: finalScore,
+      },
+    });
+    return updatedSession;
+  });
+
+  return result;
+};
+
+export const leaderBoardHandler = async (page: number) => {
+  const take = 3;
+  const skip = (page - 1) * take;
+
+  const now = new Date();
+  const tournamentStartDate = new Date(
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+  );
+
+  const leaderboard = await prisma.dailyLeaderboard.findMany({
     where: {
-      userId,
-      status: 'COMPLETED',
+      date: tournamentStartDate,
     },
     orderBy: {
-      finalScore: 'desc',
+      bestScore: 'desc',
+    },
+    skip: skip,
+    take: take,
+    select: {
+      userId: true,
+      bestScore: true,
+      user: {
+        select: {
+          username: true,
+        },
+      },
     },
   });
 
-  let currentBestScore = 0;
-  if (userSessions.length > 0) {
-    currentBestScore = userSessions[0].bestScore;
-  }
-
-  const finalScore = session.currentScore;
-
-  const updatedSession = await prisma.dailyTournamentSession.update({
-    where: {
-      id: sessionId,
-    },
-    data: {
-      endedAt,
-      status: UserTournamentStatus.COMPLETED,
-      finalScore,
-      bestScore: finalScore > currentBestScore ? finalScore : currentBestScore,
-    },
-  });
-
-  return updatedSession;
+  return leaderboard;
 };

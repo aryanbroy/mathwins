@@ -5,6 +5,7 @@ import {
   fetchDailyAttempts,
   fetchDailyTournament,
   finalSessionSubmission,
+  getDailyLeaderboard,
   minuteScoreUpdate,
   submitQuestion,
 } from '../controller/dailyTour.controller';
@@ -21,5 +22,6 @@ router.patch('/session/submit_question', verifyUser, submitQuestion);
 router.post('/session/submit_final', verifyUser, finalSessionSubmission);
 
 router.post('/update/score/:minute', minuteScoreUpdate);
+router.get('/leaderboard', getDailyLeaderboard);
 
 export default router;
