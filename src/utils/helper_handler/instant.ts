@@ -292,6 +292,9 @@ export const playersCountHandler = async (
 export const retrieveTournamentHandler = async (userId: string) => {
   const participatedTournaments = await prisma.instantParticipant.findMany({
     where: { userId },
+    include: {
+      tournament: true,
+    },
     orderBy: {
       joinedAt: 'desc',
     },

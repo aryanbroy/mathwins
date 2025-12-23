@@ -126,9 +126,9 @@ export const createDailyTournamentSession = asyncHandler(
       where: {
         userId: userId,
         status: 'IN_PROGRESS',
-        endsAt: {
-          lt: now,
-        },
+        // endsAt: {
+        //   lt: now,
+        // },
       },
       include: {
         questions: {
