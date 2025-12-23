@@ -64,41 +64,52 @@ enum InstantTournamentSessionStatus {
 }
 
 model User {
-  id                  String     @id @default(cuid())
-  createdAt           DateTime   @default(now())
-  updatedAt           DateTime   @updatedAt
-  phoneNumber         String?    @unique
-  googleId            String?    @unique
-  email               String?    @unique
-  deviceHash          String? // For device-based merging
-  username            String     @unique
-  usernameReservedAt  DateTime?
-  avatarType          AvatarType @default(DEFAULT)
-  profilePictureUrl   String?
-  coins               Int        @default(0)
-  lifetimeCoins       Int        @default(0)
-  lifetimeCoinPoints  Int        @default(0)
-  level               Int        @default(1)
-  theme               Theme      @default(SYSTEM)
-  soundEnabled        Boolean    @default(true)
-  hapticsEnabled      Boolean    @default(true)
-  language            String     @default("en")
-  referralCode        String?    @unique
-  referredById        String?
-  referredBy          User?      @relation("Referrals", fields: [referredById], references: [id])
-  referrals           User[]     @relation("Referrals")
-  referralRewarded    Boolean    @default(false)
-  role                Role       @default(USER)
-  soloAttemptCount    Int        @default(0)
-  instantAttemptCount Int        @default(0)
-  dailyAttemptCount   Int        @default(0)
+  id                 String     @id @default(cuid())
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  phoneNumber        String?    @unique
+  googleId           String?    @unique
+  email              String?    @unique
+  deviceHash         String? // For device-based merging
+  username           String     @unique
+  usernameReservedAt DateTime?
+  avatarType         AvatarType @default(DEFAULT)
+  profilePictureUrl  String?
+
+  coins              Int @default(0)
+  lifetimeCoins      Int @default(0)
+  lifetimeCoinPoints Int @default(0)
+
+  level          Int     @default(1)
+  theme          Theme   @default(SYSTEM)
+  soundEnabled   Boolean @default(true)
+  hapticsEnabled Boolean @default(true)
+  language       String  @default("en")
+
+  referralCode     String? @unique
+  referredById     String?
+  referredBy       User?   @relation("Referrals", fields: [referredById], references: [id])
+  referrals        User[]  @relation("Referrals")
+  referralRewarded Boolean @default(false)
+
+  role                Role @default(USER)
+  soloAttemptCount    Int  @default(0)
+  instantAttemptCount Int  @default(0)
+  dailyAttemptCount   Int  @default(0)
 
   dailySessions      DailyTournamentSession[]
   soloSessions       SoloSession[]
   instantSessions    InstantSession[]
   instantParticipant InstantParticipant[]
 
-  dailyLeaderBoards DailyLeaderboard[]
+  dailyLeaderBoards  DailyLeaderboard[]
+  instantLeaderboard InstantLeaderboard[]
+
+  rewardClaim       RewardClaim[]
+  referralsGiven    Referral[]    @relation("Referrer")
+  referralsReceived Referral[]    @relation("Referee")
+
+  coinLedger CoinLedger[]
 
   @@index([username])
   @@index([phoneNumber])
@@ -289,6 +300,18 @@ model InstantParticipant {
   @@index([userId, joinedAt])
 }
 
+model InstantLeaderboard {
+  id           String   @id @default(cuid())
+  tournamentId String
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bestScore    Int      @default(0)
+  updatedAt    DateTime @updatedAt
+
+  @@unique([tournamentId, userId])
+  @@index([tournamentId, bestScore])
+}
+
 model SoloLeaderboard {
   id         String   @id @default(cuid())
   date       DateTime @db.Date
@@ -302,4 +325,87 @@ model SoloLeaderboard {
 
   @@unique([userId, date])
   @@index([date])
+}
+
+enum ClaimStatus {
+  PENDING
+  FULFILLED
+  REJECTED
+}
+
+model RewardClaim {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  coinsLocked Int // Amount locked when claim requested (should be >= 5000)
+  status      ClaimStatus @default(PENDING)
+
+  voucherCode String?
+  adminNotes  String?   @db.Text
+  fulfilledBy String?
+  fulfilledAt DateTime?
+
+  rejectionReason String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+}
+
+enum ReferralStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+}
+
+model Referral {
+  id String @id @default(cuid())
+
+  referrerId String
+  referrer   User   @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+
+  refereeId String? // Null until referee signs up
+  referee   User?   @relation("Referee", fields: [refereeId], references: [id], onDelete: Cascade)
+
+  referralCode String         @unique
+  status       ReferralStatus @default(PENDING)
+
+  referrerCoins Int       @default(0) // Coins granted to referrer (from config)
+  refereeCoins  Int       @default(0) // Coins granted to referee (from config)
+  rewardedAt    DateTime? // When both parties received rewards
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([referrerId, status])
+  @@index([refereeId, status])
+  @@index([referralCode])
+}
+
+enum CoinLedgerSource {
+  DAILY_PERFORMANCE
+  REFERRAL
+  REWARD_LOCK
+  REWARD_UNLOCK
+  REDEMPTION
+}
+
+model CoinLedger {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  date  DateTime
+  delta Int
+
+  source      CoinLedgerSource
+  referenceId String
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, source, referenceId])
+  @@index([userId, date])
 }
