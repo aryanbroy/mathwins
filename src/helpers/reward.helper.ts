@@ -78,6 +78,7 @@ type FulfilledHistory = {
   coinsLocked: number;
   createdAt: Date;
   voucherCode: string;
+  adminNotes: string;
 };
 
 type RejectedHistory = {
@@ -86,11 +87,14 @@ type RejectedHistory = {
   coinsLocked: number;
   createdAt: Date;
   rejectionReason: string;
+  adminNotes: string;
 };
 
-type ClaimHistory = BaseHistory | FulfilledHistory | RejectedHistory;
+export type ClaimHistory = BaseHistory | FulfilledHistory | RejectedHistory;
 
-export const listRewardClaimsHandler = async (userId: string) => {
+export const listRewardClaimsHandler = async (
+  userId: string
+): Promise<ClaimHistory[]> => {
   const claimHistory = await prisma.rewardClaim.findMany({
     where: { userId },
     select: {
@@ -122,6 +126,7 @@ export const listRewardClaimsHandler = async (userId: string) => {
         coinsLocked: claim.coinsLocked,
         createdAt: claim.createdAt,
         voucherCode: claim.voucherCode!,
+        adminNotes: claim.adminNotes,
       };
     } else if (claim.status === 'REJECTED') {
       return {
@@ -130,6 +135,7 @@ export const listRewardClaimsHandler = async (userId: string) => {
         coinsLocked: claim.coinsLocked,
         createdAt: claim.createdAt,
         rejectionReason: claim.rejectionReason!,
+        adminNotes: claim.adminNotes,
       };
     }
 
