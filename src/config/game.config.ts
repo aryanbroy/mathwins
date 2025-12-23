@@ -17,7 +17,7 @@ const gameConfig = {
     minute_snapshot_keys: [1,2,3,4,5],   // minute keys including final
     server_timer_tolerance_sec: 1        // allowed tolerance when validating client timer
   },
-
+  // 2
   instant_tournament: {
     room_size_max: 100,
     room_wait_timeout_sec: 1200,   // 20 minutes TTL for room creation

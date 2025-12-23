@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../prisma';
-import gameConfig from '../utils/game.config';
+import gameConfig from "../config/game.config"
 import { ApiResponse } from '../utils/api/ApiResponse';
 import { generateQuestion } from '../utils/question.utils';
 import { generateSeed } from '../utils/seed.utils';
@@ -576,130 +576,200 @@ function getIstRange(dateStr: string) {
 
 export const leaderboard = async (req: Request, res: Response) => {
   try {
-    const { todayDate } = req.body;
-    if (!todayDate) return res.status(400).json({ ok: false, error: "todayDate required in body" });
+    const { todayDate, start = 1, end = 10 } = req.body;
 
-    // 1) compute IST day range
-    let start: Date, end: Date;
+    // 1) Validate inputs
+    if (!todayDate) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "todayDate required in body" });
+    }
+
+    if (typeof start !== "number" || typeof end !== "number") {
+      return res
+        .status(400)
+        .json({ ok: false, error: "start and end must be numbers" });
+    }
+
+    if (start < 1 || end < start) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Invalid start/end range" });
+    }
+    // 2) Compute IST day range
+    let startDate: Date, endDate: Date;
     try {
-      ({ start, end } = getIstRange(todayDate));
+      ({ start: startDate, end: endDate } = getIstRange(todayDate));
     } catch (e: any) {
       return res.status(400).json({ ok: false, error: e.message });
     }
 
-    // 2) load active config to get single_player distribution
-    const configRow = gameConfig;
-    const distribution = configRow?.points_distribution?.single_player_distribution ?? [];
+    // 3) Load config distribution
+    const distribution = gameConfig?.points_distribution?.single_player_distribution ?? [];
 
-    // 3) fetch all finished SoloSessions for that date with a finalScore
+    // 4) fetch all finished SoloSessions for that date with a finalScore
     //    We only select needed fields to keep the query small
     const sessions = await prisma.soloSession.findMany({
       where: {
-        date: { gte: start, lt: end },
+        date: { gte: startDate, lt: endDate },
         finalScore: { not: null },
-        // adjust statuses to your project's finished enum values
-        status: { in: ["COMPLETED"] }
+        status: { in: ["COMPLETED"] },
       },
       select: {
         id: true,
         userId: true,
         finalScore: true,
-        updatedAt: true, // used for tie-breaks (earlier wins)
-        endedAt: true
-      }
+        updatedAt: true,
+        endedAt: true,
+      },
     });
-    console.log("sessions :- ",sessions);
-    
 
-    // 4) if no sessions, return early
     if (!sessions.length) {
-      return res.status(200).json({ ok: true, generated: 0, message: "No sessions found for this date" });
+      return res.status(200).json({
+        ok: true,
+        totalPlayers: 0,
+        start,
+        end,
+        count: 0,
+        results: [],
+        message: "No sessions found for this date",
+      });
     }
 
     // 5) group sessions by userId and pick best finalScore per user
     //    tie-break rule: if scores equal, earlier updatedAt wins
-    const bestByUser = new Map<string, { score: number; updatedAt?: Date | null; endedAt?: Date | null }>();
+    const bestByUser = new Map<
+      string,
+      { score: number; updatedAt?: Date | null; endedAt?: Date | null }
+    >();
     for (const s of sessions) {
       const uid = s.userId;
-      const score = typeof s.finalScore === "number" ? s.finalScore : parseFloat(String(s.finalScore));
+      const score =
+        typeof s.finalScore === "number"
+          ? s.finalScore
+          : parseFloat(String(s.finalScore));
+
       const cur = bestByUser.get(uid);
-      if (!cur) {  
-        bestByUser.set(uid, { score, updatedAt: s.updatedAt, endedAt: s.endedAt });
-      } else {
-        if (score > cur.score) {
-          bestByUser.set(uid, { score, updatedAt: s.updatedAt, endedAt: s.endedAt });
-        } else if (score === cur.score) {
-          // tie -> choose earlier updatedAt
-          const curT = cur.updatedAt ? new Date(cur.updatedAt).getTime() : 0;
-          const newT = s.updatedAt ? new Date(s.updatedAt).getTime() : 0;
-          if (newT < curT) {
-            bestByUser.set(uid, { score, updatedAt: s.updatedAt, endedAt: s.endedAt });
-          } else if (newT === curT) {
-            // extra tie-break
-            const curE = cur.endedAt ? new Date(cur.endedAt).getTime() : 0;
-            const newE = s.endedAt ? new Date(s.endedAt).getTime() : 0;
-            if (newE < curE) bestByUser.set(uid, { score, updatedAt: s.updatedAt, endedAt: s.endedAt });
-          }
+
+      if (!cur) {
+        bestByUser.set(uid, {
+          score,
+          updatedAt: s.updatedAt,
+          endedAt: s.endedAt,
+        });
+        continue;
+      }
+
+      if (score > cur.score) {
+        bestByUser.set(uid, {
+          score,
+          updatedAt: s.updatedAt,
+          endedAt: s.endedAt,
+        });
+      } else if (score === cur.score) {
+        const curUpd = cur.updatedAt
+          ? new Date(cur.updatedAt).getTime()
+          : Number.MAX_SAFE_INTEGER;
+        const newUpd = s.updatedAt
+          ? new Date(s.updatedAt).getTime()
+          : Number.MAX_SAFE_INTEGER;
+
+        if (newUpd < curUpd) {
+          bestByUser.set(uid, {
+            score,
+            updatedAt: s.updatedAt,
+            endedAt: s.endedAt,
+          });
         }
       }
     }
 
     // 6) turn map into array and sort by score desc, updatedAt asc
-    const rows = Array.from(bestByUser.entries()).map(([userId, v]) => ({
+     const rows = Array.from(bestByUser.entries()).map(([userId, v]) => ({
       userId,
       score: v.score,
       updatedAt: v.updatedAt,
-      endedAt: v.endedAt
+      endedAt: v.endedAt,
     }));
 
     rows.sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;        // higher score first
+      if (b.score !== a.score) return b.score - a.score;
+
       const aUpd = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
       const bUpd = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-      if (aUpd !== bUpd) return aUpd - bUpd;                  // earlier update (smaller time) first
+      if (aUpd !== bUpd) return aUpd - bUpd;
+
       const aEnd = a.endedAt ? new Date(a.endedAt).getTime() : 0;
       const bEnd = b.endedAt ? new Date(b.endedAt).getTime() : 0;
-      return aEnd - bEnd;                                     // earlier end if still tied
+      return aEnd - bEnd;
     });
 
     // 7) compute rank, percentile and coinPoints; prepare upsert ops
     const totalPlayers = rows.length;
-    const dateOnly = start.toISOString().slice(0, 10); // YYYY-MM-DD
+    const dateOnly = startDate.toISOString().slice(0, 10);
+
+    const results: {
+      userId: string;
+      score: number;
+      rank: number;
+      percentile: number;
+      coinPoints: number;
+    }[] = [];
+
     const upsertOps = [];
-    const results = [];
 
     for (let i = 0; i < rows.length; i++) {
       const rank = i + 1;
       const percentile = (rank / totalPlayers) * 100;
       const coinPoints = mapPercentileToPoints(distribution, percentile);
 
-      results.push({ userId: rows[i].userId, score: rows[i].score, rank, percentile, coinPoints });
+      results.push({
+        userId: rows[i].userId,
+        score: rows[i].score,
+        rank,
+        percentile,
+        coinPoints,
+      });
 
-      // add to soloLeaderboard, id = userId_YYYY-MM-DD
       const deterministicId = `${rows[i].userId}_${dateOnly}`;
+
       upsertOps.push(
         prisma.soloLeaderboard.upsert({
           where: { id: deterministicId },
           create: {
             id: deterministicId,
-            date: start,
+            date: startDate,
             userId: rows[i].userId,
             score: rows[i].score,
             rank,
             percentile,
-            coinPoints
+            coinPoints,
           },
           update: {
             score: rows[i].score,
             rank,
             percentile,
-            coinPoints
-          }
+            coinPoints,
+          },
         })
       );
     }
-    return res.status(200).json({ ok: true, generated: results.length, results });
+    if (start === 1) {
+      await prisma.$transaction(upsertOps);
+    }
+    // 8) Pagination (1-based)
+    const fromIndex = start - 1;
+    const toIndex = Math.min(end, totalPlayers);
+    const paginatedResults = results.slice(fromIndex, toIndex);
 
+    return res.status(200).json({
+      ok: true,
+      totalPlayers,
+      start,
+      end: toIndex,
+      count: paginatedResults.length,
+      results: paginatedResults,
+    });
   } catch (err) {
     console.error("[solo leaderboard] error:", err);
     return res.status(500).json({ ok: false, error: "Internal server error" });
