@@ -147,7 +147,7 @@ export const submitSession = async (
 };
 
 export const leaderBoardHandler = async (page: number) => {
-  const take = 3;
+  const take = 10;
   const skip = (page - 1) * take;
 
   const now = new Date();
@@ -176,4 +176,25 @@ export const leaderBoardHandler = async (page: number) => {
   });
 
   return leaderboard;
+};
+
+export const fetchUserRank = async (userId: string) => {
+  const now = new Date();
+  const tournamentStartDate = new Date(
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+  );
+
+  const leaderboards = await prisma.dailyLeaderboard.findMany({
+    where: {
+      date: tournamentStartDate,
+    },
+    orderBy: {
+      bestScore: 'desc',
+    },
+  });
+
+  const rank =
+    leaderboards.findIndex((leaderboard) => leaderboard.userId === userId) + 1;
+
+  return rank;
 };
