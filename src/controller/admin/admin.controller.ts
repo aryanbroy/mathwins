@@ -1,7 +1,12 @@
-import { Request, Response } from 'express';
+import { Request, Response, text } from 'express';
 import { asyncHandler } from '../../middlewares/asyncHandler';
 import { ApiError } from '../../utils/api/ApiError';
-import { listAllClaimsHandler } from '../../helpers/auth.helper';
+import {
+  listAllClaimsHandler,
+  rejectClaimHandler,
+} from '../../helpers/admin.helper';
+import { ApiResponse } from '../../utils/api/ApiResponse';
+import prisma from '../../prisma';
 
 export const listAllClaims = asyncHandler(
   async (req: Request, res: Response) => {
@@ -18,6 +23,36 @@ export const listAllClaims = asyncHandler(
       claimStatus = 'PENDING';
     }
 
-    await listAllClaimsHandler(claimStatus);
+    const claims = await listAllClaimsHandler(claimStatus);
+
+    return res.status(200).json(new ApiResponse(200, claims));
   }
 );
+
+export const rejectClaim = asyncHandler(async (req: Request, res: Response) => {
+  const { userId } = req;
+  if (!userId) {
+    throw new ApiError({
+      statusCode: 400,
+      message: 'Received invalid user id from auth handler',
+    });
+  }
+
+  const { claimId, reason, notes } = req.body;
+  if (!claimId) {
+    throw new ApiError({ statusCode: 400, message: 'missing fields: claimId' });
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const rejectClaimData = await rejectClaimHandler(
+      tx,
+      userId,
+      claimId,
+      reason,
+      notes
+    );
+    return rejectClaimData;
+  });
+
+  return res.status(200).json(new ApiResponse(200, result, 'claim rejected'));
+});

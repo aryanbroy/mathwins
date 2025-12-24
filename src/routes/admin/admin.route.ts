@@ -6,7 +6,10 @@ import {
   changeConfig,
 } from '../../controller/admin/editconfig.controller';
 import { verifyUser } from '../../middlewares/auth.middleware';
-import { listAllClaims } from '../../controller/admin/admin.controller';
+import {
+  listAllClaims,
+  rejectClaim,
+} from '../../controller/admin/admin.controller';
 
 const router = Router();
 
@@ -21,5 +24,6 @@ router.patch(
 );
 
 router.post('/rewards/claims', isAdmin, listAllClaims);
+router.get('/rewards/reject', isAdmin, rejectClaim);
 
 export default router;
