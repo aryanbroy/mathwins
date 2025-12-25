@@ -2,25 +2,18 @@ import { Request, Response } from 'express';
 import prisma from '../prisma';
 import { ApiError } from '../utils/api/ApiError';
 import { ApiResponse } from '../utils/api/ApiResponse';
-import crypto from "crypto";
+import crypto from 'crypto';
 import Jwt from 'jsonwebtoken';
 import { asyncHandler } from '../middlewares/asyncHandler';
 import {
   coinsSummaryHandler,
   getUserTransactionsHandler,
-  userClaimHandler,
 } from '../helpers/user.helper';
 
-function generateReferralCode(
-  email?: string,
-  phone?: string
-): string {
-  const source = (email || phone || "").toLowerCase().trim();
+function generateReferralCode(email?: string, phone?: string): string {
+  const source = (email || phone || '').toLowerCase().trim();
 
-  const hash = crypto
-    .createHash("sha256")
-    .update(source)
-    .digest("base64url"); // URL-safe
+  const hash = crypto.createHash('sha256').update(source).digest('base64url'); // URL-safe
 
   return hash.slice(0, 8).toUpperCase();
 }
@@ -62,7 +55,9 @@ export const createUser = async (req: Request, res: Response) => {
   });
   const userId = user.id;
   const JWT_SECRET = process.env.JWT_SECRET as string;
-  const jwtSting = Jwt.sign({userId, username, email}, JWT_SECRET, { expiresIn: '1h' });
+  const jwtSting = Jwt.sign({ userId, username, email }, JWT_SECRET, {
+    expiresIn: '1h',
+  });
   res
     .status(201)
     .json(new ApiResponse(201, jwtSting, 'Created new user succussfuly'));
@@ -106,24 +101,5 @@ export const getTransactionHistory = asyncHandler(
     res
       .status(200)
       .json(new ApiResponse(200, history, 'Fetched transaction history'));
-  }
-);
-
-export const userClaimHistory = asyncHandler(
-  async (req: Request, res: Response) => {
-    const { userData } = req;
-    const userId = userData.id;
-    if (!userId) {
-      throw new ApiError({
-        statusCode: 400,
-        message: 'Received invalid user id from auth handler',
-      });
-    }
-
-    const history = await userClaimHandler(userId);
-
-    res
-      .status(200)
-      .json(new ApiResponse(200, history, 'fetched user claims histroy'));
   }
 );

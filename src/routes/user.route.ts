@@ -4,7 +4,6 @@ import {
   getAllUsers,
   getCoinsSummary,
   getTransactionHistory,
-  userClaimHistory,
 } from '../controller/user.controller';
 import { verifyUser } from '../middlewares/auth.middleware';
 
@@ -15,7 +14,5 @@ router.get('/', getAllUsers);
 
 // router.get('/coins/summary', verifyUser, getCoinsSummary);
 // router.get('/coins', verifyUser, getTransactionHistory);
-
-// router.get('/claims', verifyUser, userClaimHistory);
 
 export default router;

@@ -1,5 +1,7 @@
 import { Prisma } from '../generated/prisma';
+import prisma from '../prisma';
 import { ApiError } from '../utils/api/ApiError';
+import { CLAIM_STATUS_MAP } from '../utils/user.util';
 
 export const postClaimRequestHandler = async (
   tx: Prisma.TransactionClient,
@@ -61,4 +63,89 @@ export const postClaimRequestHandler = async (
     }
     throw e;
   }
+};
+
+type BaseHistory = {
+  id: string;
+  status: string;
+  coinsLocked: number;
+  createdAt: Date;
+};
+
+type FulfilledHistory = {
+  id: string;
+  status: string;
+  coinsLocked: number;
+  createdAt: Date;
+  voucherCode: string;
+  adminNotes: string;
+};
+
+type RejectedHistory = {
+  id: string;
+  status: string;
+  coinsLocked: number;
+  createdAt: Date;
+  rejectionReason: string;
+  adminNotes: string;
+};
+
+export type ClaimHistory = BaseHistory | FulfilledHistory | RejectedHistory;
+
+export const listRewardClaimsHandler = async (
+  userId: string
+): Promise<ClaimHistory[]> => {
+  const claimHistory = await prisma.rewardClaim.findMany({
+    where: { userId },
+    select: {
+      status: true,
+      coinsLocked: true,
+      voucherCode: true,
+      rejectionReason: true,
+      adminNotes: true,
+      createdAt: true,
+      id: true,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
+  const history: ClaimHistory[] = claimHistory.map((claim) => {
+    if (claim.status === 'PENDING') {
+      return {
+        id: claim.id,
+        status: CLAIM_STATUS_MAP[claim.status],
+        coinsLocked: claim.coinsLocked,
+        createdAt: claim.createdAt,
+      };
+    } else if (claim.status === 'FULFILLED') {
+      return {
+        id: claim.id,
+        status: CLAIM_STATUS_MAP[claim.status],
+        coinsLocked: claim.coinsLocked,
+        createdAt: claim.createdAt,
+        voucherCode: claim.voucherCode!,
+        adminNotes: claim.adminNotes,
+      };
+    } else if (claim.status === 'REJECTED') {
+      return {
+        id: claim.id,
+        status: CLAIM_STATUS_MAP[claim.status],
+        coinsLocked: claim.coinsLocked,
+        createdAt: claim.createdAt,
+        rejectionReason: claim.rejectionReason!,
+        adminNotes: claim.adminNotes,
+      };
+    }
+
+    return {
+      id: claim.id,
+      status: CLAIM_STATUS_MAP[claim.status] || claim.status,
+      coinsLocked: claim.coinsLocked,
+      createdAt: claim.createdAt,
+    };
+  });
+
+  return history;
 };
