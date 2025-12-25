@@ -404,6 +404,8 @@ model CoinLedger {
   source      CoinLedgerSource
   referenceId String
 
+  metadata Json?
+
   createdAt DateTime @default(now())
 
   @@unique([userId, source, referenceId])

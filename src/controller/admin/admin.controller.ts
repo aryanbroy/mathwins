@@ -2,6 +2,7 @@ import { Request, Response, text } from 'express';
 import { asyncHandler } from '../../middlewares/asyncHandler';
 import { ApiError } from '../../utils/api/ApiError';
 import {
+  fulfillClaimHandler,
   listAllClaimsHandler,
   rejectClaimHandler,
 } from '../../helpers/admin.helper';
@@ -56,3 +57,38 @@ export const rejectClaim = asyncHandler(async (req: Request, res: Response) => {
 
   return res.status(200).json(new ApiResponse(200, result, 'claim rejected'));
 });
+
+export const fulfillClaim = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId } = req;
+    if (!userId) {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'Received invalid user id from auth handler',
+      });
+    }
+
+    const { claimId, voucherCode, reason, notes } = req.body;
+    if (!claimId || !voucherCode) {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'missing fields: claimId, voucherCode',
+      });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const fulfillClaimData = await fulfillClaimHandler(
+        tx,
+        claimId,
+        userId,
+        voucherCode,
+        reason,
+        notes
+      );
+    });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, result, 'claim fulfilled'));
+  }
+);

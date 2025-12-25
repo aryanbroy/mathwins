@@ -3,6 +3,7 @@ import { ClaimStatus, Prisma } from '../generated/prisma';
 import prisma from '../prisma';
 import { CLAIM_STATUS_MAP } from '../utils/user.util';
 import { ApiError } from '../utils/api/ApiError';
+import { verifyClaim } from '../utils/helper_handler/admin';
 
 type PendingHistory = {
   id: string;
@@ -123,7 +124,7 @@ export const rejectClaimHandler = async (
         userId: claimRequestUserId,
         date: new Date(),
         source: 'REWARD_UNLOCK',
-        delta: +claim.coinsLocked,
+        delta: claim.coinsLocked,
         referenceId: claim.id,
       },
     });
@@ -149,4 +150,72 @@ export const rejectClaimHandler = async (
   }
 
   return { claimId, status: 'Rejected', refunded: claim.coinsLocked };
+};
+
+export const fulfillClaimHandler = async (
+  tx: Prisma.TransactionClient,
+  claimId: string,
+  adminId: string,
+  voucherCode: string,
+  reason?: string,
+  notes?: string
+) => {
+  const claim = await tx.rewardClaim.update({
+    where: {
+      id: claimId,
+      status: 'PENDING',
+    },
+    data: {
+      status: 'FULFILLED',
+      voucherCode: voucherCode,
+      rejectionReason: reason ? reason : null,
+      adminNotes: notes ? notes : null,
+      fulfilledBy: adminId,
+      fulfilledAt: new Date(),
+    },
+  });
+
+  if (!claim) {
+    throw new ApiError({
+      statusCode: 404,
+      message: 'invalid claim id provided',
+    });
+  }
+
+  if (claim.status !== 'PENDING') {
+    throw new ApiError({
+      statusCode: 400,
+      message: 'requested claim is not pending',
+    });
+  }
+
+  const claimRequestUserId = claim.userId;
+
+  try {
+    await tx.coinLedger.create({
+      data: {
+        source: 'REDEMPTION',
+        userId: claimRequestUserId,
+        date: new Date(),
+        delta: 0,
+        referenceId: claim.id,
+        metadata: {
+          voucherCode: claim.voucherCode,
+          message: 'balance already adjusted while REWARD_LOCK',
+        },
+      },
+    });
+
+    return { claimId, voucherCode: claim.voucherCode };
+  } catch (e: any) {
+    if (e instanceof PrismaClientKnownRequestError) {
+      if (e.code === 'P2002') {
+        throw new ApiError({
+          statusCode: 409,
+          message: 'ledger already created',
+        });
+      }
+    }
+    throw e;
+  }
 };

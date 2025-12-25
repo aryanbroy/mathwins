@@ -7,6 +7,7 @@ import {
 } from '../../controller/admin/editconfig.controller';
 import { verifyUser } from '../../middlewares/auth.middleware';
 import {
+  fulfillClaim,
   listAllClaims,
   rejectClaim,
 } from '../../controller/admin/admin.controller';
@@ -24,6 +25,7 @@ router.patch(
 );
 
 router.post('/rewards/claims', isAdmin, listAllClaims);
-router.get('/rewards/reject', isAdmin, rejectClaim);
+router.post('/rewards/reject', isAdmin, rejectClaim);
+router.post('/rewards/fulfill', isAdmin, fulfillClaim);
 
 export default router;
