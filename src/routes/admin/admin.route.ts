@@ -18,7 +18,7 @@ router.post(
 
 router.patch(
   "/config",
-  isAdmin,        // must verify admin email
+  isAdmin,
   changeConfig
 );
 

@@ -29,10 +29,11 @@ export const verifyUser = async (
     if (!user)
       throw new ApiError({ statusCode: 404, message: 'User not authorized' });
     
-    req.userId = userId;
-    req.soloAttemptCount = user.soloAttemptCount;
-    req.instantAttempCount = user.instantAttemptCount;
-    req.dailyAttemptCount = user.dailyAttemptCount; 
+    req.userData = user;
+    // req.userId = userId;
+    // req.soloAttemptCount = user.soloAttemptCount;
+    // req.instantAttempCount = user.instantAttemptCount;
+    // req.dailyAttemptCount = user.dailyAttemptCount; 
     
     next();
   } catch (err: unknown) {
@@ -103,11 +104,12 @@ export const verifyUser2 = async (
         message: "User not found",
       });
     }
-    req.userId = user.id;
-    req.soloAttemptCount = user.soloAttemptCount;
-    req.instantAttempCount = user.instantAttemptCount;
-    req.dailyAttemptCount = user.dailyAttemptCount;
-
+    // req.userId = user.id;
+    // req.soloAttemptCount = user.soloAttemptCount;
+    // req.instantAttempCount = user.instantAttemptCount;
+    // req.dailyAttemptCount = user.dailyAttemptCount;
+    req.userData = user;
+    
     next();
   } catch (err: unknown) {
     console.log(err);

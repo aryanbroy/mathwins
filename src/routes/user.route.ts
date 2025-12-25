@@ -11,11 +11,11 @@ import { verifyUser } from '../middlewares/auth.middleware';
 const router = Router();
 
 router.get('/', getAllUsers);
-router.post('/create', createUser);
+// router.post('/create', createUser);
 
-router.get('/coins/summary', verifyUser, getCoinsSummary);
-router.get('/coins', verifyUser, getTransactionHistory);
+// router.get('/coins/summary', verifyUser, getCoinsSummary);
+// router.get('/coins', verifyUser, getTransactionHistory);
 
-router.get('/claims', verifyUser, userClaimHistory);
+// router.get('/claims', verifyUser, userClaimHistory);
 
 export default router;

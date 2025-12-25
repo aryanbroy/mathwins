@@ -70,7 +70,8 @@ export const createUser = async (req: Request, res: Response) => {
 
 export const getCoinsSummary = asyncHandler(
   async (req: Request, res: Response) => {
-    const { userId } = req;
+    const { userData } = req;
+    const userId = userData.id;
     if (!userId) {
       throw new ApiError({
         statusCode: 400,
@@ -91,7 +92,8 @@ export const getCoinsSummary = asyncHandler(
 
 export const getTransactionHistory = asyncHandler(
   async (req: Request, res: Response) => {
-    const { userId } = req;
+    const { userData } = req;
+    const userId = userData.id;
     if (!userId) {
       throw new ApiError({
         statusCode: 400,
@@ -109,7 +111,8 @@ export const getTransactionHistory = asyncHandler(
 
 export const userClaimHistory = asyncHandler(
   async (req: Request, res: Response) => {
-    const { userId } = req;
+    const { userData } = req;
+    const userId = userData.id;
     if (!userId) {
       throw new ApiError({
         statusCode: 400,
