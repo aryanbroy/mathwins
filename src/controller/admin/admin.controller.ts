@@ -11,7 +11,7 @@ import prisma from '../../prisma';
 
 export const listAllClaims = asyncHandler(
   async (req: Request, res: Response) => {
-    const { userId } = req;
+    const { id: userId } = req.userData;
     if (!userId) {
       throw new ApiError({
         statusCode: 400,
@@ -31,7 +31,7 @@ export const listAllClaims = asyncHandler(
 );
 
 export const rejectClaim = asyncHandler(async (req: Request, res: Response) => {
-  const { userId } = req;
+  const { id: userId } = req.userData;
   if (!userId) {
     throw new ApiError({
       statusCode: 400,
@@ -60,7 +60,7 @@ export const rejectClaim = asyncHandler(async (req: Request, res: Response) => {
 
 export const fulfillClaim = asyncHandler(
   async (req: Request, res: Response) => {
-    const { userId } = req;
+    const { userId } = req.userData;
     if (!userId) {
       throw new ApiError({
         statusCode: 400,
@@ -85,6 +85,7 @@ export const fulfillClaim = asyncHandler(
         reason,
         notes
       );
+      return fulfillClaimData;
     });
 
     return res

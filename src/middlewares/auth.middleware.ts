@@ -20,7 +20,7 @@ export const verifyUser = async (
     const userId = String(incomingUserId);
     if (!userId)
       throw new ApiError({ statusCode: 400, message: 'Empty user id field' });
-    
+
     const user = await prisma.user.findFirst({
       where: {
         id: userId,
@@ -28,13 +28,13 @@ export const verifyUser = async (
     });
     if (!user)
       throw new ApiError({ statusCode: 404, message: 'User not authorized' });
-    
+
     req.userData = user;
     // req.userId = userId;
     // req.soloAttemptCount = user.soloAttemptCount;
     // req.instantAttempCount = user.instantAttemptCount;
-    // req.dailyAttemptCount = user.dailyAttemptCount; 
-    
+    // req.dailyAttemptCount = user.dailyAttemptCount;
+
     next();
   } catch (err: unknown) {
     console.log(err);
@@ -51,7 +51,7 @@ export const verifyUser2 = async (
   next: NextFunction
 ) => {
   try {
-    // 
+    //
     // store JWT in localStore
     // send token as header
     // verify in middleWare -> next()
@@ -59,17 +59,17 @@ export const verifyUser2 = async (
     if (!authHeader) {
       throw new ApiError({
         statusCode: 401,
-        message: "Authorization header missing",
+        message: 'Authorization header missing',
       });
     }
-    const token = authHeader.startsWith("Bearer ")
-      ? authHeader.split(" ")[1]
+    const token = authHeader.startsWith('Bearer ')
+      ? authHeader.split(' ')[1]
       : authHeader;
 
     if (!token) {
       throw new ApiError({
         statusCode: 401,
-        message: "JWT token missing",
+        message: 'JWT token missing',
       });
     }
     let decoded: any;
@@ -78,14 +78,14 @@ export const verifyUser2 = async (
     } catch {
       throw new ApiError({
         statusCode: 401,
-        message: "Invalid or expired token",
+        message: 'Invalid or expired token',
       });
     }
     const userId = decoded.userId;
     if (!userId) {
       throw new ApiError({
         statusCode: 401,
-        message: "Invalid token payload",
+        message: 'Invalid token payload',
       });
     }
     const user = await prisma.user.findUnique({
@@ -101,7 +101,7 @@ export const verifyUser2 = async (
     if (!user) {
       throw new ApiError({
         statusCode: 401,
-        message: "User not found",
+        message: 'User not found',
       });
     }
     // req.userId = user.id;
@@ -109,7 +109,7 @@ export const verifyUser2 = async (
     // req.instantAttempCount = user.instantAttemptCount;
     // req.dailyAttemptCount = user.dailyAttemptCount;
     req.userData = user;
-    
+
     next();
   } catch (err: unknown) {
     console.log(err);
