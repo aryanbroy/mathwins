@@ -1,4 +1,4 @@
-// import { User } from '../../src/generated/prisma/client.ts';
+import { User } from '../../src/generated/prisma/client.ts';
 
 // make it an object
 declare namespace Express {
