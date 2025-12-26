@@ -1,23 +1,43 @@
 import { NextFunction, Request, Response } from 'express';
 import { ApiError } from '../utils/api/ApiError';
 import prisma from '../prisma';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+
+interface UserPayload extends JwtPayload {
+  userId: string;
+}
 
 export const verifyUser = async (
   req: Request,
-  _: Response,
+  res: Response,
   next: NextFunction
 ) => {
   try {
     // instead of fetching the direct authorization, update this to get the token from cookies or headers (use jwt for verification)
-    const incomingUserId = req.header('Authorization');
     // const incomingUserId = 'cmiyq868400009hg4h1wlewx0';
     // const incomingUserId = 'cmj15yijg0003pwg4og4gmcly';
     // const incomingUserId = 'cmj15yth40004pwg43pvf7b85';
     // const incomingUserId = 'cmj15yxly0005pwg4d5jhda2q';
     // const incomingUserId = 'cmj15y8pu0001pwg440rujz6m';
-    // const incomingUserId = '';
-    const userId = String(incomingUserId);
+    const authHeader = req.header("Authorization");
+    console.log("auth - middle : ",authHeader);
+    
+    if (!authHeader) {
+      return res.status(401).json({ error: "Missing Authorization header" });
+    }
+
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : authHeader;
+
+    console.log("middleWare : ",token);      
+    const JWT_SECRET = process.env.JWT_SECRET as string;
+    // const verifiedUser = jwt.verify('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbWpsdWN5aW4wMDAzZWQweWVnd2pleWVkIiwidXNlcm5hbWUiOiJTd2F5YW5zaHUiLCJlbWFpbCI6ImFyZ3Vzc3RvbnlAZ21haWwuY29tIiwiaWF0IjoxNzY2NjkxMjU4LCJleHAiOjE3NjcyOTYwNTh9.nlvnrSWNj6qjORKqPa8rq_7B8fP8TS3yqA31Ik-DsIo', JWT_SECRET);
+    const verifiedUser = jwt.verify(token, JWT_SECRET) as UserPayload;
+    console.log(verifiedUser);
+    
+    const {userId} = verifiedUser;
+    // const userId = verifiedUser.userId as string;
     if (!userId)
       throw new ApiError({ statusCode: 400, message: 'Empty user id field' });
 
@@ -29,7 +49,7 @@ export const verifyUser = async (
     if (!user)
       throw new ApiError({ statusCode: 404, message: 'User not authorized' });
 
-    req.userData = user;
+    req.body.userData = user;
     // req.userId = userId;
     // req.soloAttemptCount = user.soloAttemptCount;
     // req.instantAttempCount = user.instantAttemptCount;
@@ -45,77 +65,77 @@ export const verifyUser = async (
   }
 };
 
-export const verifyUser2 = async (
-  req: Request,
-  _: Response,
-  next: NextFunction
-) => {
-  try {
-    //
-    // store JWT in localStore
-    // send token as header
-    // verify in middleWare -> next()
-    const authHeader = req.header('Authorization');
-    if (!authHeader) {
-      throw new ApiError({
-        statusCode: 401,
-        message: 'Authorization header missing',
-      });
-    }
-    const token = authHeader.startsWith('Bearer ')
-      ? authHeader.split(' ')[1]
-      : authHeader;
+// export const verifyUser2 = async (
+//   req: Request,
+//   _: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     //
+//     // store JWT in localStore
+//     // send token as header
+//     // verify in middleWare -> next()
+//     const authHeader = req.header('Authorization');
+//     if (!authHeader) {
+//       throw new ApiError({
+//         statusCode: 401,
+//         message: 'Authorization header missing',
+//       });
+//     }
+//     const token = authHeader.startsWith('Bearer ')
+//       ? authHeader.split(' ')[1]
+//       : authHeader;
 
-    if (!token) {
-      throw new ApiError({
-        statusCode: 401,
-        message: 'JWT token missing',
-      });
-    }
-    let decoded: any;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET as string);
-    } catch {
-      throw new ApiError({
-        statusCode: 401,
-        message: 'Invalid or expired token',
-      });
-    }
-    const userId = decoded.userId;
-    if (!userId) {
-      throw new ApiError({
-        statusCode: 401,
-        message: 'Invalid token payload',
-      });
-    }
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        soloAttemptCount: true,
-        instantAttemptCount: true,
-        dailyAttemptCount: true,
-      },
-    });
+//     if (!token) {
+//       throw new ApiError({
+//         statusCode: 401,
+//         message: 'JWT token missing',
+//       });
+//     }
+//     let decoded: any;
+//     try {
+//       decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+//     } catch {
+//       throw new ApiError({
+//         statusCode: 401,
+//         message: 'Invalid or expired token',
+//       });
+//     }
+//     const userId = decoded.userId;
+//     if (!userId) {
+//       throw new ApiError({
+//         statusCode: 401,
+//         message: 'Invalid token payload',
+//       });
+//     }
+//     const user = await prisma.user.findUnique({
+//       where: { id: userId },
+//       select: {
+//         id: true,
+//         soloAttemptCount: true,
+//         instantAttemptCount: true,
+//         dailyAttemptCount: true,
+//       },
+//     });
 
-    if (!user) {
-      throw new ApiError({
-        statusCode: 401,
-        message: 'User not found',
-      });
-    }
-    // req.userId = user.id;
-    // req.soloAttemptCount = user.soloAttemptCount;
-    // req.instantAttempCount = user.instantAttemptCount;
-    // req.dailyAttemptCount = user.dailyAttemptCount;
-    req.userData = user;
+//     if (!user) {
+//       throw new ApiError({
+//         statusCode: 401,
+//         message: 'User not found',
+//       });
+//     }
+//     // req.userId = user.id;
+//     // req.soloAttemptCount = user.soloAttemptCount;
+//     // req.instantAttempCount = user.instantAttemptCount;
+//     // req.dailyAttemptCount = user.dailyAttemptCount;
+//     req.userData = user;
 
-    next();
-  } catch (err: unknown) {
-    console.log(err);
-    throw new ApiError({
-      statusCode: 500,
-      message: 'error verifying user',
-    });
-  }
-};
+//     next();
+//   } catch (err: unknown) {
+//     console.log(err);
+//     throw new ApiError({
+//       statusCode: 500,
+//       message: 'error verifying user',
+//     });
+//   }
+// };

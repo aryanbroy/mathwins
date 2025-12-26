@@ -3,7 +3,7 @@ import prisma from '../prisma';
 import { ApiError } from '../utils/api/ApiError';
 import { ApiResponse } from '../utils/api/ApiResponse';
 import crypto from 'crypto';
-import Jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { asyncHandler } from '../middlewares/asyncHandler';
 import {
   coinsSummaryHandler,
@@ -24,13 +24,16 @@ export const getAllUsers = async (req: Request, res: Response) => {
 
 export const createUser = async (req: Request, res: Response) => {
   const { username, email } = req.body;
-
+  console.log(req.body);
+  
   if (!username || !email) {
     throw new ApiError({
       statusCode: 400,
       message: 'Received empty fields: username or email',
     });
   }
+  console.log("name : ",username," email : ",email);
+  
 
   const usernameExists = await prisma.user.findFirst({
     where: {
@@ -45,6 +48,7 @@ export const createUser = async (req: Request, res: Response) => {
       message: 'Username already exists',
     });
   }
+  
   const generateNewReferralCode = generateReferralCode(email);
   const user = await prisma.user.create({
     data: {
@@ -55,17 +59,34 @@ export const createUser = async (req: Request, res: Response) => {
   });
   const userId = user.id;
   const JWT_SECRET = process.env.JWT_SECRET as string;
-  const jwtSting = Jwt.sign({ userId, username, email }, JWT_SECRET, {
-    expiresIn: '1h',
+  const jwtSting = jwt.sign({ userId, username, email }, JWT_SECRET, {
+    expiresIn: '7d',
   });
   res
     .status(201)
     .json(new ApiResponse(201, jwtSting, 'Created new user succussfuly'));
 };
 
+export const getUser = async (req: Request, res: Response) => {
+  try {
+    const {token} = req.body;
+    console.log(token);
+    
+    const JWT_SECRET = process.env.JWT_SECRET as string;
+    const user = jwt.verify(token, JWT_SECRET);
+    console.log(user);
+    return res.status(200).json(user);
+    
+  } catch (error) {
+    console.log(error);
+    
+    return res.status(500).send(error);
+  }
+};
+
 export const getCoinsSummary = asyncHandler(
   async (req: Request, res: Response) => {
-    const { userData } = req;
+    const {userData} = req.body;
     const userId = userData.id;
     if (!userId) {
       throw new ApiError({
@@ -87,7 +108,7 @@ export const getCoinsSummary = asyncHandler(
 
 export const getTransactionHistory = asyncHandler(
   async (req: Request, res: Response) => {
-    const { userData } = req;
+    const {userData} = req.body;
     const userId = userData.id;
     if (!userId) {
       throw new ApiError({

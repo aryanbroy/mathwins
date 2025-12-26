@@ -39,8 +39,8 @@ app.use('/api/auth', authRouter);
 app.use('/api/game', gameRouter);
 app.use('/api/daily', dailyTournamentRouter);
 app.use('/api/solo', soloRouter);
-app.use('/api/instant', instantRouter);
-app.use('/api/rewards', rewardsRoute);
+// app.use('/api/instant', instantRouter);
+// app.use('/api/rewards', rewardsRoute);
 
 // // app.use('/api/admin/login', adminLogin);
 // app.use('/api/admin/', adminRoute);

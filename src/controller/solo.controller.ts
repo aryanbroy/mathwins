@@ -25,7 +25,8 @@ export const startSolo = async (req: Request, res: Response) => {
       // 
       // console.log(req.body);
       
-      const { userId } = req.body;
+      const { userData } = req.body;
+      const userId = userData.id; 
       const totalQuestionsInRun = gameConfig.single_player.round_size;
       const freeAttemptsAllowed = gameConfig.single_player.daily_free_attempts;
       const today = new Date();
@@ -103,7 +104,8 @@ export const startSolo = async (req: Request, res: Response) => {
 
 export const continueSolo = async (req: Request, res: Response) => {
   try {
-    const {userId, soloSessionId} = req.body;
+    const {soloSessionId, userData} = req.body;
+    const userId = userData.id;
     if(!userId || !soloSessionId){
       throw new ApiError({
           statusCode: 400,
@@ -211,8 +213,9 @@ export const continueSolo = async (req: Request, res: Response) => {
 }
 
 export const quitSolo  = async (req: Request, res: Response) => {
-  try {
-    const {soloSessionId, userId} = req.body;
+  try {      
+    const {soloSessionId, userData} = req.body;
+    const userId = userData.id;
     if(!soloSessionId || !userId){
       throw new ApiError({
           statusCode: 400,
@@ -293,8 +296,11 @@ export const quitSolo  = async (req: Request, res: Response) => {
 
 export const nextQuestion  = async (req: Request, res: Response) => {
   try {
-    const {soloSessionId, userId, questionId, userAnswer, time} = req.body;
-    // console.log("next : ",req.body);
+    const { soloSessionId, questionId, userAnswer, time} = req.body;
+    const {userData} = req.body;
+    const userId = userData.id;
+    // const soloSessionId = userData.soloSessionId;
+    console.log("next : ",req.body);
     
     const today = new Date();
     if(!soloSessionId || !userId || !questionId || (userAnswer === null || userAnswer === undefined) || !time){
@@ -309,7 +315,8 @@ export const nextQuestion  = async (req: Request, res: Response) => {
         message: 'userAnswer must be a number between 0 and 9',
       });
     }
-
+    console.log("time : ",today);
+    
     const session = await prisma.soloSession.findUnique({
       where: { id: soloSessionId },
       include: {
@@ -350,7 +357,8 @@ export const nextQuestion  = async (req: Request, res: Response) => {
         message: 'Question does not belong to this session',
       });
     }
-
+    console.log("qs : ",question);
+    
     const isCorrect = userAnswer === question.correctDigit;
     if (isCorrect) {
       const updatedBankedPoint = session.bankedPoints + gameConfig.single_player.point_for_correct_answer;
@@ -443,7 +451,9 @@ export const nextQuestion  = async (req: Request, res: Response) => {
 
 export const finalSessionSubmission  = async (req: Request, res: Response) => {
   try {
-    const { soloSessionId, userId } = req.body;
+    const {userData} = req.body;
+    const userId = userData.id;
+    const soloSessionId = userData.soloSessionId;
     if (!soloSessionId || !userId) {
       return res.status(400).json({
         success: false,
@@ -529,6 +539,76 @@ export const finalSessionSubmission  = async (req: Request, res: Response) => {
     res.status(500).send('Error in Submission. Try Again ! !');
   }
 }
+
+export const getRemainingSoloAttempts = async ( req: Request, res: Response ) => {
+  try {
+    const {userData} = req.body;
+    const userId = userData.id;
+    console.log(userId);
+    
+    if (!userId) {
+      return res.status(401).json({
+        ok: false,
+        error: "Unauthorized",
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        soloAttemptCount: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        ok: false,
+        error: "User not found",
+      });
+    }
+    console.log("user",user);
+    
+    const config = await prisma.gameConfig.findFirst({
+      where: { isActive: true },
+      select: {
+        single_player: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!config) {
+      return res.status(500).json({
+        ok: false,
+        error: "Active game config not found",
+      });
+    }
+    console.log("config ",config);
+
+    const singlePlayerConfig = config.single_player as {
+      daily_free_attempts: number;
+    };
+
+    const maxDailyAttempts =
+      singlePlayerConfig.daily_free_attempts ?? 0;
+
+    const remainingAttempts = Math.max( maxDailyAttempts - user.soloAttemptCount, 0 );
+
+    return res.status(200).json({
+      ok: true,
+      data: {
+        totalDailyAttempts: maxDailyAttempts,
+        usedAttempts: user.soloAttemptCount,
+        remainingAttempts,
+      },
+    });
+  } catch (error) {
+    console.error("getRemainingSoloAttempts error:", error);
+    return res.status(500).json({
+      ok: false,
+      error: "Internal server error",
+    });
+  }
+};
 
 function mapPercentileToPoints(distribution: { range: string; points: number }[], percentile: number) {
   if (!distribution || distribution.length === 0) {

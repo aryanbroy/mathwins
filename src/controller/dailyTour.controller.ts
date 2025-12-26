@@ -15,8 +15,9 @@ import {
 
 export const fetchDailyAttempts = asyncHandler(
   async (req: Request, res: Response) => {
-    const { userId, dailyAttemptCount } = req;
-    if (!userId) {
+    const {userData} = req.body;
+    const { id, dailyAttemptCount } = userData;
+    if (!id) {
       throw new ApiError({
         statusCode: 400,
         message: 'Invalid user id',
@@ -43,8 +44,9 @@ export const fetchDailyAttempts = asyncHandler(
 );
 
 export const fetchDailyTournament = async (req: Request, res: Response) => {
-  const { userId } = req;
-  if (!userId) {
+  const {userData} = req.body;
+  const id = userData;
+  if (!id) {
     throw new ApiError({
       statusCode: 400,
       message: 'Invalid user id',
@@ -72,8 +74,9 @@ export const fetchDailyTournament = async (req: Request, res: Response) => {
 
 export const createDailyTournament = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.userId;
-    if (!userId) {
+    const {userData} = req.body;
+    const { id } = userData;
+    if (!id) {
       throw new ApiError({
         statusCode: 400,
         message: 'Invalid user id',
@@ -105,10 +108,11 @@ export const createDailyTournament = asyncHandler(
 
 export const createDailyTournamentSession = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.userId;
+    const {userData} = req.body;
+    const { id } = userData;
     const now = new Date();
     const endsAt = new Date(Date.now() + 5 * 60 * 1000);
-    if (!userId) {
+    if (!id) {
       throw new ApiError({
         statusCode: 400,
         message: 'Received invalid user id from auth handler',
@@ -124,7 +128,7 @@ export const createDailyTournamentSession = asyncHandler(
     const sessionSeed = generateSeed();
     const existingSession = await prisma.dailyTournamentSession.findFirst({
       where: {
-        userId: userId,
+        userId: id,
         status: 'IN_PROGRESS',
         // endsAt: {
         //   lt: now,
@@ -141,7 +145,7 @@ export const createDailyTournamentSession = asyncHandler(
     });
 
     if (existingSession) {
-      submitSession(existingSession.id, userId, endsAt).catch((err) =>
+      submitSession(existingSession.id, id, endsAt).catch((err) =>
         console.log('error updating session status: ', err)
       );
     }
@@ -157,7 +161,7 @@ export const createDailyTournamentSession = asyncHandler(
 
       await tx.user.update({
         where: {
-          id: userId,
+          id: id,
         },
         data: {
           dailyAttemptCount: {
@@ -168,7 +172,7 @@ export const createDailyTournamentSession = asyncHandler(
 
       const session = await tx.dailyTournamentSession.create({
         data: {
-          userId: userId,
+          userId: id,
           status: 'IN_PROGRESS',
           tournamentId: dailyTournament.id,
           sessionSeed: sessionSeed,
@@ -207,8 +211,7 @@ export const createDailyTournamentSession = asyncHandler(
 
 export const submitQuestion = asyncHandler(
   async (req: Request, res: Response) => {
-    const { dailyTournamentSessionId, questionId, answer, timeTaken } =
-      req.body; // session id value can be later received from cookies
+    const { dailyTournamentSessionId, questionId, answer, timeTaken } = req.body; // session id value can be later received from cookies
 
     if (
       !dailyTournamentSessionId ||
@@ -284,7 +287,8 @@ export const submitQuestion = asyncHandler(
 
 export const finalSessionSubmission = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.userId;
+    const {userData} = req.body;
+    const userId = userData.id;
     if (!userId) {
       throw new ApiError({
         statusCode: 400,
@@ -325,7 +329,8 @@ export const minuteScoreUpdate = asyncHandler(
 
 export const getDailyLeaderboard = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.userId;
+    const {userData} = req.body;
+    const userId = userData.id;
     let { page } = req.query;
     if (!page) page = '1';
 

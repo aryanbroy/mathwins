@@ -2,17 +2,19 @@ import { Router } from 'express';
 import {
   createUser,
   getAllUsers,
-  getCoinsSummary,
-  getTransactionHistory,
+  getUser
+  // getCoinsSummary,
+  // getTransactionHistory,
 } from '../controller/user.controller';
 import { verifyUser } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-router.get('/', getAllUsers);
-// router.post('/create', createUser);
+router.get('/', verifyUser, getAllUsers);
+router.post('/create', createUser);
+router.post('/getuserdata', getUser);
 
-router.get('/coins/summary', verifyUser, getCoinsSummary);
-router.get('/coins', verifyUser, getTransactionHistory);
+// router.get('/coins/summary', verifyUser, getCoinsSummary);
+// router.get('/coins', verifyUser, getTransactionHistory);
 
 export default router;
