@@ -166,12 +166,14 @@ model DailyTournamentSession {
 }
 
 model DailyLeaderboard {
-  id        String   @id @default(cuid())
-  date      DateTime
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bestScore Int      @default(0)
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  date       DateTime
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bestScore  Int      @default(0)
+  rank       Int      @default(0)
+  coinPoints Int      @default(0)
+  updatedAt  DateTime @updatedAt
 
   @@unique([date, userId])
   @@index([date, bestScore])
