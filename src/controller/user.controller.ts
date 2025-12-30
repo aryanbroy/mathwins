@@ -23,7 +23,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
 };
 
 export const createUser = async (req: Request, res: Response) => {
-  const { username, email } = req.body;
+  const { username, email, picture } = req.body;
   console.log(req.body);
   
   if (!username || !email) {
@@ -54,12 +54,13 @@ export const createUser = async (req: Request, res: Response) => {
     data: {
       username,
       email,
+      profilePictureUrl: picture,
       referralCode: generateNewReferralCode,
     },
   });
   const userId = user.id;
   const JWT_SECRET = process.env.JWT_SECRET as string;
-  const jwtSting = jwt.sign({ userId, username, email }, JWT_SECRET, {
+  const jwtSting = jwt.sign({ userId, username, email, picture }, JWT_SECRET, {
     expiresIn: '7d',
   });
   res

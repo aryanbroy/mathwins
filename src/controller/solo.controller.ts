@@ -544,7 +544,7 @@ export const getRemainingSoloAttempts = async ( req: Request, res: Response ) =>
   try {
     const {userData} = req.body;
     const userId = userData.id;
-    console.log(userId);
+    console.log("id :- ",userId);
     
     if (!userId) {
       return res.status(401).json({
