@@ -121,25 +121,16 @@ export const submitSession = async (
       Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
     );
 
-    await tx.dailyLeaderboard.upsert({
-      where: {
-        date_userId: {
-          userId,
-          date: tournamentStartDate,
-        },
-      },
-      update: {
-        bestScore: {
-          set: finalScore,
-        },
-        updatedAt: now,
-      },
-      create: {
-        date: tournamentStartDate,
-        userId,
-        bestScore: finalScore,
-      },
-    });
+    console.log('Values:');
+    console.log({ userId, tournamentStartDate, finalScore });
+
+    await tx.$queryRaw`
+        INSERT INTO "DailyLeaderboard" ("id", "userId", "date", "bestScore", "updatedAt")
+        VALUES (gen_random_uuid(), ${userId}, ${tournamentStartDate}, ${finalScore}, NOW())
+        ON CONFLICT ("userId", "date")
+        DO UPDATE SET "bestScore" = GREATEST("DailyLeaderboard"."bestScore", ${finalScore})
+      `;
+
     return updatedSession;
   });
 

@@ -10,7 +10,7 @@ import { ApiResponse } from '../utils/api/ApiResponse';
 
 export const postClaimRequest = asyncHandler(
   async (req: Request, res: Response) => {
-    const { userId } = req;
+    const { id: userId } = req.body.userData;
     if (!userId) {
       throw new ApiError({
         statusCode: 400,
@@ -30,7 +30,7 @@ export const postClaimRequest = asyncHandler(
 );
 
 export const listClaims = asyncHandler(async (req: Request, res: Response) => {
-  const { userId } = req;
+  const { id: userId } = req.body.userData;
   if (!userId) {
     throw new ApiError({
       statusCode: 400,

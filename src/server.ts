@@ -34,13 +34,15 @@ import { errorHandler } from './middlewares/error.middleware';
 import adminRoute from './routes/admin/admin.route';
 import rewardsRoute from './routes/rewards.route';
 import lifelineRoute from './routes/lifeline.route';
+import cronRouter from './routes/cron.route';
 
 app.use('/api/user', userRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/game', gameRouter);
 app.use('/api/daily', dailyTournamentRouter);
 app.use('/api/solo', soloRouter);
-// app.use('/api/instant', instantRouter);
+app.use('/api/cron', cronRouter);
+app.use('/api/instant', instantRouter);
 // app.use('/api/rewards', rewardsRoute);
 app.use('/api/lifeline', lifelineRoute);
 

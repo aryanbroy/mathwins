@@ -15,7 +15,8 @@ import {
 
 export const fetchDailyAttempts = asyncHandler(
   async (req: Request, res: Response) => {
-    const {userData} = req.body;
+    const { userData } = req;
+    console.log('Userdata: ', userData);
     const { id, dailyAttemptCount } = userData;
     if (!id) {
       throw new ApiError({
@@ -44,8 +45,8 @@ export const fetchDailyAttempts = asyncHandler(
 );
 
 export const fetchDailyTournament = async (req: Request, res: Response) => {
-  const {userData} = req.body;
-  const id = userData;
+  const { userData } = req;
+  const id = userData.id;
   if (!id) {
     throw new ApiError({
       statusCode: 400,
@@ -74,7 +75,7 @@ export const fetchDailyTournament = async (req: Request, res: Response) => {
 
 export const createDailyTournament = asyncHandler(
   async (req: Request, res: Response) => {
-    const {userData} = req.body;
+    const { userData } = req;
     const { id } = userData;
     if (!id) {
       throw new ApiError({
@@ -108,7 +109,7 @@ export const createDailyTournament = asyncHandler(
 
 export const createDailyTournamentSession = asyncHandler(
   async (req: Request, res: Response) => {
-    const {userData} = req.body;
+    const { userData } = req;
     const { id } = userData;
     const now = new Date();
     const endsAt = new Date(Date.now() + 5 * 60 * 1000);
@@ -211,7 +212,8 @@ export const createDailyTournamentSession = asyncHandler(
 
 export const submitQuestion = asyncHandler(
   async (req: Request, res: Response) => {
-    const { dailyTournamentSessionId, questionId, answer, timeTaken } = req.body; // session id value can be later received from cookies
+    const { dailyTournamentSessionId, questionId, answer, timeTaken } =
+      req.body; // session id value can be later received from cookies
 
     if (
       !dailyTournamentSessionId ||
@@ -287,7 +289,7 @@ export const submitQuestion = asyncHandler(
 
 export const finalSessionSubmission = asyncHandler(
   async (req: Request, res: Response) => {
-    const {userData} = req.body;
+    const { userData } = req;
     const userId = userData.id;
     if (!userId) {
       throw new ApiError({
@@ -329,7 +331,7 @@ export const minuteScoreUpdate = asyncHandler(
 
 export const getDailyLeaderboard = asyncHandler(
   async (req: Request, res: Response) => {
-    const {userData} = req.body;
+    const { userData } = req;
     const userId = userData.id;
     let { page } = req.query;
     if (!page) page = '1';

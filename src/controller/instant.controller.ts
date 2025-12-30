@@ -34,7 +34,7 @@ export const testInstant = async (_: Request, res: Response) => {
 
 export const getPlayersInTournament = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.userId;
+    const { id: userId } = req.userData;
     if (!userId) {
       throw new ApiError({
         statusCode: 400,
@@ -71,7 +71,8 @@ export const getPlayersInTournament = asyncHandler(
 
 export const joinOrCreateTournament = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.userId;
+    const { id: userId } = req.userData;
+    console.log(userId);
     if (!userId) {
       throw new ApiError({
         statusCode: 400,
@@ -92,8 +93,7 @@ export const joinOrCreateTournament = asyncHandler(
 
 export const startSession = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.userId;
-    const instantAttemptCount = req.instantAttempCount;
+    const { id: userId, instantAttemptCount } = req.userData;
 
     if (!userId) {
       throw new ApiError({
@@ -155,7 +155,7 @@ export const startSession = asyncHandler(
 );
 
 export const listRooms = asyncHandler(async (req: Request, res: Response) => {
-  const userId = req.userId;
+  const { id: userId } = req.userData;
   if (!userId) {
     throw new ApiError({ statusCode: 403, message: 'Unauthorized user' });
   }
@@ -181,7 +181,7 @@ export const listRooms = asyncHandler(async (req: Request, res: Response) => {
 export const submitQuestion = asyncHandler(
   async (req: Request, res: Response) => {
     const submittedAt = new Date();
-    const userId = req.userId;
+    const { id: userId } = req.userData;
     if (!userId) {
       throw new ApiError({ statusCode: 401, message: 'Unauthorized user' });
     }
@@ -238,7 +238,7 @@ export const submitQuestion = asyncHandler(
 
 export const submitFinal = asyncHandler(async (req: Request, res: Response) => {
   const submittedAt = new Date();
-  const userId = req.userId;
+  const { id: userId } = req.userData;
   if (!userId) {
     throw new ApiError({ statusCode: 401, message: 'Unauthorized user' });
   }
@@ -317,7 +317,7 @@ export const submitFinal = asyncHandler(async (req: Request, res: Response) => {
 
 export const allTournaments = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.userId;
+    const { id: userId } = req.userData;
     if (!userId) {
       throw new ApiError({
         statusCode: 400,
@@ -341,7 +341,7 @@ export const allTournaments = asyncHandler(
 
 export const tournamentLeaderboard = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.userId;
+    const { id: userId } = req.userData;
     if (!userId) {
       throw new ApiError({
         statusCode: 400,
