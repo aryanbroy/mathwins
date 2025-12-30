@@ -14,30 +14,30 @@ export const verifyUser = async (
 ) => {
   try {
     // instead of fetching the direct authorization, update this to get the token from cookies or headers (use jwt for verification)
-    // const incomingUserId = 'cmiyq868400009hg4h1wlewx0';
-    // const incomingUserId = 'cmj15yijg0003pwg4og4gmcly';
-    // const incomingUserId = 'cmj15yth40004pwg43pvf7b85';
-    // const incomingUserId = 'cmj15yxly0005pwg4d5jhda2q';
-    // const incomingUserId = 'cmj15y8pu0001pwg440rujz6m';
-    const authHeader = req.header("Authorization");
-    console.log("auth - middle : ",authHeader);
-    
-    if (!authHeader) {
-      return res.status(401).json({ error: "Missing Authorization header" });
-    }
-
-    const token = authHeader.startsWith("Bearer ")
-      ? authHeader.split(" ")[1]
-      : authHeader;
-
-    console.log("middleWare : ",token);      
-    const JWT_SECRET = process.env.JWT_SECRET as string;
-    // const verifiedUser = jwt.verify('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbWpsdWN5aW4wMDAzZWQweWVnd2pleWVkIiwidXNlcm5hbWUiOiJTd2F5YW5zaHUiLCJlbWFpbCI6ImFyZ3Vzc3RvbnlAZ21haWwuY29tIiwiaWF0IjoxNzY2NjkxMjU4LCJleHAiOjE3NjcyOTYwNTh9.nlvnrSWNj6qjORKqPa8rq_7B8fP8TS3yqA31Ik-DsIo', JWT_SECRET);
-    const verifiedUser = jwt.verify(token, JWT_SECRET) as UserPayload;
-    console.log(verifiedUser);
-    
-    const {userId} = verifiedUser;
+    // const authHeader = req.header('Authorization');
+    // console.log('auth - middle : ', authHeader);
+    //
+    // if (!authHeader) {
+    //   return res.status(401).json({ error: 'Missing Authorization header' });
+    // }
+    //
+    // const token = authHeader.startsWith('Bearer ')
+    //   ? authHeader.split(' ')[1]
+    //   : authHeader;
+    //
+    // console.log('middleWare : ', token);
+    // const JWT_SECRET = process.env.JWT_SECRET as string;
+    // // const verifiedUser = jwt.verify('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbWpsdWN5aW4wMDAzZWQweWVnd2pleWVkIiwidXNlcm5hbWUiOiJTd2F5YW5zaHUiLCJlbWFpbCI6ImFyZ3Vzc3RvbnlAZ21haWwuY29tIiwiaWF0IjoxNzY2NjkxMjU4LCJleHAiOjE3NjcyOTYwNTh9.nlvnrSWNj6qjORKqPa8rq_7B8fP8TS3yqA31Ik-DsIo', JWT_SECRET);
+    // const verifiedUser = jwt.verify(token, JWT_SECRET) as UserPayload;
+    // console.log(verifiedUser);
+    //
+    // const { userId } = verifiedUser;
     // const userId = verifiedUser.userId as string;
+
+    // const userId = 'cmjog0zue0000f2g41u0ja8d8';
+    // const userId = 'cmjq7xbbo0000k5g4ulu0fwnq';
+    // const userId = 'cmjq7xp3c0001k5g4h2stergz';
+    const userId = 'cmjq7xvty0002k5g4za159b1o';
     if (!userId)
       throw new ApiError({ statusCode: 400, message: 'Empty user id field' });
 
@@ -49,7 +49,8 @@ export const verifyUser = async (
     if (!user)
       throw new ApiError({ statusCode: 404, message: 'User not authorized' });
 
-    req.body.userData = user;
+    // req.body.userData = user;
+    req.userData = user;
     // req.userId = userId;
     // req.soloAttemptCount = user.soloAttemptCount;
     // req.instantAttempCount = user.instantAttemptCount;

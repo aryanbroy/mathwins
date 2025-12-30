@@ -60,7 +60,7 @@ export const rejectClaim = asyncHandler(async (req: Request, res: Response) => {
 
 export const fulfillClaim = asyncHandler(
   async (req: Request, res: Response) => {
-    const { userId } = req.userData;
+    const { userId } = req.body;
     if (!userId) {
       throw new ApiError({
         statusCode: 400,

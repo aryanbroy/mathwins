@@ -232,13 +232,19 @@ export const finalSubmissionHandler = async (
     },
   });
 
+  const now = new Date();
+  const tournamentStartDate = new Date(
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+  );
+
   await tx.$queryRaw`
-    INSERT INTO "InstantLeaderboard" ("id", "tournamentId", "userId", "bestScore", "updatedAt")
-    VALUES (gen_random_uuid(), ${roomId}, ${userId}, ${finalScore}, NOW())
+    INSERT INTO "InstantLeaderboard" ("id", "tournamentId", "userId", "bestScore", "coinPoints", "submittedAt", "updatedAt", "date")
+    VALUES (gen_random_uuid(), ${roomId}, ${userId}, ${finalScore},  0.0, NOW(), NOW(), ${tournamentStartDate})
     ON CONFLICT ("tournamentId", "userId")
     DO UPDATE SET 
       "bestScore" = GREATEST("InstantLeaderboard"."bestScore", ${finalScore})`;
 
+  console.log('working after the query...');
   const updatedSession = await tx.instantSession.update({
     where: {
       id: sessionId,

@@ -41,7 +41,7 @@ app.use('/api/game', gameRouter);
 app.use('/api/daily', dailyTournamentRouter);
 app.use('/api/solo', soloRouter);
 app.use('/api/cron', cronRouter);
-// app.use('/api/instant', instantRouter);
+app.use('/api/instant', instantRouter);
 // app.use('/api/rewards', rewardsRoute);
 
 // // app.use('/api/admin/login', adminLogin);

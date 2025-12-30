@@ -308,7 +308,11 @@ model InstantLeaderboard {
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   bestScore    Int      @default(0)
+  rank         Int      @default(0)
+  coinPoints   Decimal  @db.Decimal(4, 2)
+  submittedAt  DateTime
   updatedAt    DateTime @updatedAt
+  date         DateTime @default(now())
 
   @@unique([tournamentId, userId])
   @@index([tournamentId, bestScore])
