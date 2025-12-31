@@ -106,6 +106,8 @@ export const continueSolo = async (req: Request, res: Response) => {
   try {
     const {soloSessionId, userData} = req.body;
     const userId = userData.id;
+    console.log(req.body);
+    
     if(!userId || !soloSessionId){
       throw new ApiError({
           statusCode: 400,
@@ -178,7 +180,10 @@ export const continueSolo = async (req: Request, res: Response) => {
         currentLevel: newLevel,
         updatedAt: new Date(),
       },
-      include: {
+      select: {
+        bankedPoints: true,
+        currentRound: true,
+        currentLevel: true,
         questions: {
           select: {
             id: true,
@@ -200,6 +205,7 @@ export const continueSolo = async (req: Request, res: Response) => {
     return res.status(200).json({
       message: 'Next round started successfully',
       isRoundCompleted: false,
+      bankedPoints: updatedSession.bankedPoints, 
       round: updatedSession.currentRound,
       level: updatedSession.currentLevel,
       questions: sanitizedQuestion,
@@ -374,6 +380,7 @@ export const nextQuestion  = async (req: Request, res: Response) => {
           currentLevel: newNextLevel,
         },
       })
+      
       // add check for round_complete : session.questionsANswered % gameConfig.roundSize == 0
       // if currentRound > gameConfig.free_round - show an add
       // if yes, dont generate new Question, show option - QUIT / CONTINUE 
@@ -386,6 +393,7 @@ export const nextQuestion  = async (req: Request, res: Response) => {
           isRoundCompleted: true,
           roundNumber: updatedSession.currentRound,
           correctAnswer: question.correctDigit,
+          bankedPoint: updatedSession.bankedPoints,
           message: `${session.currentRound} completed. Select CONTINUE to move ahead.`
         })
       } else {
@@ -412,8 +420,9 @@ export const nextQuestion  = async (req: Request, res: Response) => {
           success: true,
           isCorrect: true,
           isRoundCompleted: false,
-          roundNumber: updatedSession.currentRound,
           correctAnswer: question.correctDigit,
+          roundNumber: updatedSession.currentRound,
+          bankedPoint: updatedSession.bankedPoints,
           nextQuestion: sanitizedQuestion
         });
       }
