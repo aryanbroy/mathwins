@@ -208,10 +208,14 @@ export const submitQuestion = asyncHandler(
         throw new ApiError({ statusCode: 400, message: 'session expired' });
       }
 
-      await checkQuestionIsValid(tx, questionId);
+      const question = await checkQuestionIsValid(tx, questionId);
 
       const generatedQuestion = await generateQuestion(1);
-      const question = await storeQuestion(tx, generatedQuestion, session.id);
+      const newQuestion = await storeQuestion(
+        tx,
+        generatedQuestion,
+        session.id
+      );
 
       const updatedSession = await submitQuestionHandler(
         tx,
@@ -221,18 +225,24 @@ export const submitQuestion = asyncHandler(
         timeTakenMs
       );
 
-      return { updatedSession, question };
+      return { updatedSession, question, newQuestion };
     });
 
-    res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          { session: result.updatedSession, question: result.question },
-          'question submitted successfuly'
-        )
-      );
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          userId: userId,
+          questionId: questionId,
+          nextQuestion: result.newQuestion,
+          acknowledged: true,
+          currentScore: result.updatedSession.score,
+          correctAnswer: result.question.correctDigit,
+        },
+        // { session: result.updatedSession, question: result.question },
+        'question submitted successfuly'
+      )
+    );
   }
 );
 

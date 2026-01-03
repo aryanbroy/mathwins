@@ -212,6 +212,13 @@ export const createDailyTournamentSession = asyncHandler(
 
 export const submitQuestion = asyncHandler(
   async (req: Request, res: Response) => {
+    const { id: userId } = req.userData;
+    if (!userId) {
+      throw new ApiError({
+        statusCode: 400,
+        message: 'Invalid user id',
+      });
+    }
     const { dailyTournamentSessionId, questionId, answer, timeTaken } =
       req.body; // session id value can be later received from cookies
 
@@ -248,11 +255,19 @@ export const submitQuestion = asyncHandler(
 
     console.log('previous score: ', session.currentScore);
     console.log('');
-    const newGeneratedQuestion = await generateQuestion(session.currentLevel);
+
+    const { currentScore, correctAnswer, level } = await processQuestionScore(
+      questionId,
+      dailyTournamentSessionId,
+      answer,
+      timeTaken
+    );
+
+    const newGeneratedQuestion = await generateQuestion(level);
 
     const newQuestion = await prisma.questionAttempt.create({
       data: {
-        level: 1,
+        level: level,
         expression: newGeneratedQuestion.expression,
         result: newGeneratedQuestion.result,
         side: newGeneratedQuestion.side,
@@ -265,21 +280,18 @@ export const submitQuestion = asyncHandler(
     console.log('User answer: ', answer);
     console.log('Time taken to anser the question: ', timeTaken);
 
-    const currentScore = await processQuestionScore(
-      questionId,
-      dailyTournamentSessionId,
-      answer,
-      timeTaken
-    );
+    console.log('New question correct answer: ', newQuestion.correctDigit);
 
     res.status(202).json(
       new ApiResponse(
         202,
         {
+          userId,
           questionId,
-          newQuestion,
+          nextQuestion: newQuestion,
           acknowledged: true,
           currentScore,
+          correctAnswer,
         },
         'Answer submitted'
       )
@@ -331,6 +343,7 @@ export const minuteScoreUpdate = asyncHandler(
 
 export const getDailyLeaderboard = asyncHandler(
   async (req: Request, res: Response) => {
+    console.log('Fetching daily leaderboard');
     const { userData } = req;
     const userId = userData.id;
     let { page } = req.query;
@@ -342,6 +355,7 @@ export const getDailyLeaderboard = asyncHandler(
     }
 
     const leaderboardUsers = await leaderBoardHandler(pageNum);
+    console.log('Leaderboard');
 
     const userRank = await fetchUserRank(userId);
     res

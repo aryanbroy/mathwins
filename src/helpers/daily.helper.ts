@@ -8,7 +8,11 @@ export const processQuestionScore = async (
   dailyTournamentSessionId: string,
   answer: number,
   timeTaken: number
-): Promise<number> => {
+): Promise<{
+  currentScore: number;
+  correctAnswer: number;
+  level: number;
+}> => {
   console.log('evaluating score...');
   console.log('');
   const question = await prisma.questionAttempt.findFirst({
@@ -27,6 +31,7 @@ export const processQuestionScore = async (
   }
 
   const isCorrect = question.correctDigit === answer;
+  console.log('Is correct: ', isCorrect);
 
   const incrementalScore = calculateDailyScore(
     answer,
@@ -54,6 +59,7 @@ export const processQuestionScore = async (
     },
     select: {
       currentScore: true,
+      currentLevel: true,
     },
   });
   console.log(
@@ -61,7 +67,11 @@ export const processQuestionScore = async (
     updatedSession.currentScore
   );
 
-  return updatedSession.currentScore;
+  return {
+    currentScore: updatedSession.currentScore,
+    correctAnswer: question.correctDigit,
+    level: updatedSession.currentLevel,
+  };
 };
 
 export const markDailyTounamentComplete = async (tournamentStartDate: Date) => {

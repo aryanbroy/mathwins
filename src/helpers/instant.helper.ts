@@ -120,7 +120,7 @@ export const checkQuestionIsValid = async (
   questionId: string
 ): Promise<QuestionValidationType> => {
   try {
-    const isValidQuestion = await tx.questionAttempt.findUnique({
+    const validQuestion = await tx.questionAttempt.findUnique({
       where: {
         id: questionId,
       },
@@ -132,14 +132,14 @@ export const checkQuestionIsValid = async (
         level: true,
       },
     });
-    if (!isValidQuestion) {
+    if (!validQuestion) {
       throw new ApiError({
         statusCode: 404,
         message: `question: ${questionId}, not found`,
       });
     }
 
-    return isValidQuestion;
+    return validQuestion;
   } catch (err) {
     throw new ApiError({
       statusCode: 500,

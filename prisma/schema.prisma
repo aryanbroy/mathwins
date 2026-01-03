@@ -165,20 +165,6 @@ model DailyTournamentSession {
   @@map("DailyTournamentSession")
 }
 
-model DailyLeaderboard {
-  id         String   @id @default(cuid())
-  date       DateTime
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bestScore  Int      @default(0)
-  rank       Int      @default(0)
-  coinPoints Int      @default(0)
-  updatedAt  DateTime @updatedAt
-
-  @@unique([date, userId])
-  @@index([date, bestScore])
-}
-
 model MinuteSnapshot {
   id           String          @id @default(cuid())
   tournamentId String
@@ -302,6 +288,20 @@ model InstantParticipant {
   @@index([userId, joinedAt])
 }
 
+model DailyLeaderboard {
+  id         String   @id @default(cuid())
+  date       DateTime
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bestScore  Int      @default(0)
+  rank       Int      @default(0)
+  coinPoints Int      @default(0)
+  updatedAt  DateTime @updatedAt
+
+  @@unique([date, userId])
+  @@index([date, bestScore])
+}
+
 model InstantLeaderboard {
   id           String   @id @default(cuid())
   tournamentId String
@@ -316,6 +316,28 @@ model InstantLeaderboard {
 
   @@unique([tournamentId, userId])
   @@index([tournamentId, bestScore])
+}
+
+model DailyUserLeaderboard {
+  id     String   @id @default(cuid())
+  userId String
+  date   DateTime
+
+  dailyCoinPoints   Int     @default(0)
+  instantCoinPoints Decimal @default(0) // Sum of best 10
+
+  totalCoinPoints Decimal @default(0)
+  rank            Int     @default(0)
+
+  isEligible   Boolean @default(false) // >= 5 coin points
+  coinsAwarded Float   @default(0) // Set next day
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([date, rank])
+  @@index([date, isEligible, rank])
 }
 
 model SoloLeaderboard {

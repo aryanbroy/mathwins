@@ -14,18 +14,30 @@ type QuestionData = {
 
 export const FiftyFifty = async (req: Request, res: Response) => {
   try {
-    const { soloSessionId, questionId } = req.body.params;
-    console.log("50-50", req.body);
-    
-    if (!soloSessionId || !questionId) {
+    const { sessionType, sessionId, questionId } = req.body.params;
+    console.log('50-50', req.body);
+
+    if (!sessionId || !questionId) {
       return res.status(400).json({
         success: false,
         message: 'Missing required fields: soloSessionId, questionId',
       });
     }
-    const session = await prisma.soloSession.findUnique({
-      where: { id: soloSessionId },
-    });
+
+    let session;
+    if (sessionType === 'daily') {
+      session = await prisma.dailyTournamentSession.findUnique({
+        where: { id: sessionId },
+      });
+    } else if (sessionType === 'instant') {
+      session = await prisma.instantSession.findUnique({
+        where: { id: sessionId },
+      });
+    } else {
+      session = await prisma.soloSession.findUnique({
+        where: { id: sessionId },
+      });
+    }
     if (!session) {
       return res.status(400).json({ success: false });
     }
@@ -41,7 +53,7 @@ export const FiftyFifty = async (req: Request, res: Response) => {
     const correctAnswer = question.correctDigit;
 
     const allOptions = Array.from({ length: 10 }, (_, i) => i);
-    const wrongOptions = allOptions.filter(v => v !== correctAnswer);
+    const wrongOptions = allOptions.filter((v) => v !== correctAnswer);
 
     // shuffle
     for (let i = wrongOptions.length - 1; i > 0; i--) {
@@ -60,7 +72,7 @@ export const FiftyFifty = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       success: true,
-      disabledOptions
+      disabledOptions,
     });
   } catch (err) {
     console.error(err);
@@ -70,22 +82,44 @@ export const FiftyFifty = async (req: Request, res: Response) => {
 
 export const LevelDown = async (req: Request, res: Response) => {
   try {
-    const { soloSessionId, questionId } = req.body.params;
-    const userId = req.body.userData.id;
-    if (!soloSessionId || !questionId) {
+    const { sessionType, sessionId, questionId } = req.body.params;
+    const { id: userId } = req.userData;
+    if (!sessionId || !questionId || !sessionType) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: soloSessionId, questionId',
+        message: 'Missing required fields: sessionId, questionId, sessionType',
       });
     }
-    const session = await prisma.soloSession.findUnique({
-      where: { id: soloSessionId },
-      include: {
-        questions: {
-          orderBy: { questionIndex: 'asc' },
+
+    let session;
+    if (sessionType === 'daily') {
+      session = await prisma.dailyTournamentSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          questions: {
+            orderBy: { questionIndex: 'asc' },
+          },
         },
-      },
-    });
+      });
+    } else if (sessionType === 'instant') {
+      session = await prisma.instantSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          questions: {
+            orderBy: { questionIndex: 'asc' },
+          },
+        },
+      });
+    } else {
+      session = await prisma.soloSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          questions: {
+            orderBy: { questionIndex: 'asc' },
+          },
+        },
+      });
+    }
 
     if (!session) {
       return res.status(404).json({
@@ -117,7 +151,11 @@ export const LevelDown = async (req: Request, res: Response) => {
         message: 'Question not found',
       });
     }
-    if (question.soloSessionId !== soloSessionId) {
+    if (
+      (sessionType === 'solo' && question.soloSessionId !== sessionId) ||
+      (sessionType === 'daily' && question.dailySessionId !== sessionId) ||
+      (sessionType === 'instant' && question.instantSessionId !== sessionId)
+    ) {
       return res.status(400).json({
         success: false,
         message: 'Question does not belong to this session',
@@ -131,7 +169,7 @@ export const LevelDown = async (req: Request, res: Response) => {
     //   });
     // }
 
-     const newLevel = Math.max(1, session.currentLevel - 1);
+    const newLevel = Math.max(1, session.currentLevel - 1);
 
     // Generate new question at lower level
     const newGeneratedQuestion: QuestionData = await generateQuestion(newLevel);
@@ -142,27 +180,63 @@ export const LevelDown = async (req: Request, res: Response) => {
     });
 
     // Create new question at lower level
-    const newQuestion = await prisma.questionAttempt.create({
-      data: {
-        soloSessionId: soloSessionId,
-        questionIndex: session.questionsAnswered + 1,
-        level: newGeneratedQuestion.level,
-        expression: newGeneratedQuestion.expression,
-        result: newGeneratedQuestion.result,
-        side: newGeneratedQuestion.side,
-        kthDigit: newGeneratedQuestion.kthDigit,
-        correctDigit: newGeneratedQuestion.correctDigit,
-      },
-    });
+    let newQuestion;
+    if (sessionType === 'daily') {
+      newQuestion = await prisma.questionAttempt.create({
+        data: {
+          dailySessionId: sessionId,
+          questionIndex: session.questionsAnswered + 1,
+          level: newGeneratedQuestion.level,
+          expression: newGeneratedQuestion.expression,
+          result: newGeneratedQuestion.result,
+          side: newGeneratedQuestion.side,
+          kthDigit: newGeneratedQuestion.kthDigit,
+          correctDigit: newGeneratedQuestion.correctDigit,
+        },
+      });
+      await prisma.dailyTournamentSession.update({
+        where: { id: sessionId },
+        data: {
+          // usedLevelDown: true,
+          currentLevel: newLevel,
+        },
+      });
+    } else if (sessionType === 'instant') {
+      newQuestion = await prisma.questionAttempt.create({
+        data: {
+          instantSessionId: sessionId,
+          questionIndex: session.questionsAnswered + 1,
+          level: newGeneratedQuestion.level,
+          expression: newGeneratedQuestion.expression,
+          result: newGeneratedQuestion.result,
+          side: newGeneratedQuestion.side,
+          kthDigit: newGeneratedQuestion.kthDigit,
+          correctDigit: newGeneratedQuestion.correctDigit,
+        },
+      });
+    } else {
+      newQuestion = await prisma.questionAttempt.create({
+        data: {
+          soloSessionId: sessionId,
+          questionIndex: session.questionsAnswered + 1,
+          level: newGeneratedQuestion.level,
+          expression: newGeneratedQuestion.expression,
+          result: newGeneratedQuestion.result,
+          side: newGeneratedQuestion.side,
+          kthDigit: newGeneratedQuestion.kthDigit,
+          correctDigit: newGeneratedQuestion.correctDigit,
+        },
+      });
+      await prisma.soloSession.update({
+        where: { id: sessionId },
+        data: {
+          // usedLevelDown: true,
+          currentLevel: newLevel,
+        },
+      });
+    }
 
     // Update session to mark lifeline as used
-    await prisma.soloSession.update({
-      where: { id: soloSessionId },
-      data: {
-        // usedLevelDown: true,
-        currentLevel: newLevel,
-      },
-    });
 
     console.log('New question created at lower level:', newQuestion);
 
@@ -189,4 +263,4 @@ export const LevelDown = async (req: Request, res: Response) => {
     console.error(err);
     return res.status(500).json({ success: false });
   }
-}
+};

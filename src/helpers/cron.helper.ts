@@ -81,7 +81,6 @@ export const assigndailyCoinPoints = async (tournamentStartDate: Date) => {
 
 // this will run after each instant tournament ends (i.e, after 20 mins)
 export const assignInstantCoinPointsHandler = async (tournamentId: string) => {
-  const now = new Date();
   const tournament = await prisma.instantTournament.findUnique({
     where: {
       id: tournamentId,
@@ -146,7 +145,10 @@ export const assignInstantCoinPointsHandler = async (tournamentId: string) => {
   return results;
 };
 
-const aggregateCoinPoints = async (tournamentStartDate: Date) => {
+export const aggregateCoinPointsHandler = async (
+  tournamentStartDate: Date,
+  endDate: Date
+) => {
   const [dailyPlayers, instantPlayers] = await Promise.all([
     prisma.dailyLeaderboard.findMany({
       where: { date: tournamentStartDate },
@@ -154,10 +156,18 @@ const aggregateCoinPoints = async (tournamentStartDate: Date) => {
     }),
 
     prisma.instantLeaderboard.findMany({
-      where: { date: tournamentStartDate },
+      where: {
+        date: {
+          gte: tournamentStartDate,
+          lt: endDate,
+        },
+      },
       select: { userId: true, coinPoints: true },
     }),
   ]);
+
+  console.log('Daily Players: ', dailyPlayers);
+  console.log('Instant Players: ', instantPlayers);
 
   const allUserIds = new Set([
     ...dailyPlayers.map((player) => player.userId),
@@ -166,7 +176,7 @@ const aggregateCoinPoints = async (tournamentStartDate: Date) => {
 
   console.log(`Processing ${allUserIds.size} users`);
 
-  const userAggregations = await Promise.all([
+  const userAggregations = await Promise.all(
     Array.from(allUserIds).map(async (userId) => {
       const dailyPoints =
         dailyPlayers.find((p) => p.userId === userId)?.coinPoints || 0;
@@ -180,19 +190,80 @@ const aggregateCoinPoints = async (tournamentStartDate: Date) => {
         new Prisma.Decimal(0)
       );
 
-      const totalPoints = dailyPoints + instantPoints.toNumber();
+      const dailyDecimal = new Prisma.Decimal(dailyPoints);
+      const totalPoints = dailyDecimal.plus(instantPoints);
 
       return {
         userId: userId,
         dailyPoints: dailyPoints,
         instantPoints: instantPoints,
         totalPoints: totalPoints,
-        isEligible: totalPoints >= 5,
+        isEligible: totalPoints.greaterThanOrEqualTo(5),
       };
-    }),
-  ]);
+    })
+  );
 
-  // tomorrow: add dailyUserLeaderboard
+  await prisma.$transaction(
+    userAggregations.map((agg) =>
+      prisma.dailyUserLeaderboard.upsert({
+        where: {
+          userId_date: {
+            userId: agg.userId,
+            date: tournamentStartDate,
+          },
+        },
+        update: {
+          dailyCoinPoints: agg.dailyPoints,
+          instantCoinPoints: agg.instantPoints,
+          totalCoinPoints: agg.totalPoints,
+          isEligible: agg.isEligible,
+        },
+        create: {
+          userId: agg.userId,
+          dailyCoinPoints: agg.dailyPoints,
+          instantCoinPoints: agg.instantPoints,
+          totalCoinPoints: agg.totalPoints,
+          isEligible: agg.isEligible,
+          date: tournamentStartDate,
+        },
+      })
+    )
+  );
+
+  console.log(`Aggregated ${userAggregations.length} user entries`);
+
+  await assignRanksToEligibleUsers(tournamentStartDate);
 };
 
-// export const assignSoloCoinPoints = async (tournamentStartDate: Date) => {};
+const assignRanksToEligibleUsers = async (date: Date) => {
+  await prisma.$executeRaw`
+    WITH eligible AS (
+      SELECT id, "totalCoinPoints"
+      FROM "DailyUserLeaderboard"
+      WHERE "date" = ${date} AND "isEligible" = true
+    ),
+    ranked AS (
+      SELECT 
+        id,
+        ROW_NUMBER() OVER (ORDER BY "totalCoinPoints" DESC) AS rn
+      FROM eligible
+    )
+    UPDATE "DailyUserLeaderboard" d
+    SET "rank" = r.rn
+    FROM ranked r
+    WHERE d.id = r.id;
+  `;
+
+  // Set rank to 0 for ineligible users
+  await prisma.dailyUserLeaderboard.updateMany({
+    where: {
+      date,
+      isEligible: false,
+    },
+    data: {
+      rank: 0,
+    },
+  });
+
+  console.log('Assigned ranks to eligible users');
+};
