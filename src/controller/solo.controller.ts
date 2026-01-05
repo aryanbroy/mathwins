@@ -42,7 +42,7 @@ export const startSolo = async (req: Request, res: Response) => {
           },
         },
       });
-      if (updatedUser.soloAttemptCount >= freeAttemptsAllowed) {
+      if (updatedUser.soloAttemptCount > freeAttemptsAllowed) {
         return res
           .status(501)
           .send('No Free Attempt Available for Today');
