@@ -4,6 +4,7 @@ import {
   aggregateCoinPointsHandler,
   assigndailyCoinPoints,
   assignInstantCoinPointsHandler,
+  getDailyUserLeaderboardHandler,
 } from '../helpers/cron.helper';
 import { ApiResponse } from '../utils/api/ApiResponse';
 import { ApiError } from '../utils/api/ApiError';
@@ -60,10 +61,29 @@ export const assignTotalPoints = asyncHandler(
       Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + 1)
     );
 
-    await aggregateCoinPointsHandler(startDate, endDate);
+    const result = await aggregateCoinPointsHandler(startDate, endDate);
 
-    res
-      .status(200)
-      .json(new ApiResponse(200, { totalPoints: 'total points calculated' }));
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`✅ Aggregation Complete`);
+    console.log(`   Date: ${result.date}`);
+    console.log(`   Total Users: ${result.totalUsers}`);
+    console.log(`   Eligible Users: ${result.eligibleUsers}`);
+    console.log(`   Deleted Old Entries: ${result.deletedOldEntries}`);
+    console.log(`${'='.repeat(60)}\n`);
+
+    res.status(200).json(new ApiResponse(200, { result }));
+  }
+);
+
+export const getDailyUserLeaderboard = asyncHandler(
+  async (req: Request, res: Response) => {
+    const now = new Date();
+    const today = new Date(
+      Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+    );
+
+    const result = await getDailyUserLeaderboardHandler(today);
+
+    res.status(200).json(new ApiResponse(200, { result }));
   }
 );

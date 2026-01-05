@@ -152,13 +152,17 @@ export const createDailyTournamentSession = asyncHandler(
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const dailyTournament = await tx.dailyTournament.upsert({
+      const dailyTournament = await tx.dailyTournament.findUnique({
         where: {
           date: tournamentStartDate,
         },
-        update: {},
-        create: { date: tournamentStartDate },
       });
+      if (!dailyTournament) {
+        throw new ApiError({
+          statusCode: 400,
+          message: 'tournament not started yet',
+        });
+      }
 
       await tx.user.update({
         where: {
@@ -355,7 +359,6 @@ export const getDailyLeaderboard = asyncHandler(
     }
 
     const leaderboardUsers = await leaderBoardHandler(pageNum);
-    console.log('Leaderboard');
 
     const userRank = await fetchUserRank(userId);
     res

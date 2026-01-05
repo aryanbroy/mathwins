@@ -317,6 +317,7 @@ export const tournamentLeaderboardHandler = async (tournamentId: string) => {
     orderBy: {
       bestScore: 'desc',
     },
+    take: 10,
   });
 
   return tournaments;

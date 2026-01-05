@@ -149,6 +149,17 @@ export const aggregateCoinPointsHandler = async (
   tournamentStartDate: Date,
   endDate: Date
 ) => {
+  console.log(
+    `Aggregating coin points for date: ${tournamentStartDate.toISOString()}`
+  );
+
+  const deletedCount = await prisma.dailyUserLeaderboard.deleteMany({
+    where: { date: tournamentStartDate },
+  });
+  console.log(
+    `Cleared ${deletedCount.count} existing entries for ${tournamentStartDate.toISOString()}`
+  );
+
   const [dailyPlayers, instantPlayers] = await Promise.all([
     prisma.dailyLeaderboard.findMany({
       where: { date: tournamentStartDate },
@@ -203,36 +214,35 @@ export const aggregateCoinPointsHandler = async (
     })
   );
 
-  await prisma.$transaction(
-    userAggregations.map((agg) =>
-      prisma.dailyUserLeaderboard.upsert({
-        where: {
-          userId_date: {
-            userId: agg.userId,
-            date: tournamentStartDate,
-          },
-        },
-        update: {
-          dailyCoinPoints: agg.dailyPoints,
-          instantCoinPoints: agg.instantPoints,
-          totalCoinPoints: agg.totalPoints,
-          isEligible: agg.isEligible,
-        },
-        create: {
-          userId: agg.userId,
-          dailyCoinPoints: agg.dailyPoints,
-          instantCoinPoints: agg.instantPoints,
-          totalCoinPoints: agg.totalPoints,
-          isEligible: agg.isEligible,
-          date: tournamentStartDate,
-        },
-      })
-    )
+  const validAggregations = userAggregations.filter((agg) =>
+    agg.totalPoints.greaterThan(0)
   );
 
+  if (validAggregations.length > 0) {
+    await prisma.dailyUserLeaderboard.createMany({
+      data: validAggregations.map((agg) => ({
+        userId: agg.userId,
+        dailyCoinPoints: agg.dailyPoints,
+        instantCoinPoints: agg.instantPoints,
+        totalCoinPoints: agg.totalPoints,
+        isEligible: agg.isEligible,
+        date: tournamentStartDate,
+        rank: 0, // Will be assigned in next step
+      })),
+    });
+
+    console.log(`✅ Inserted ${validAggregations.length} new entries`);
+  }
   console.log(`Aggregated ${userAggregations.length} user entries`);
 
   await assignRanksToEligibleUsers(tournamentStartDate);
+
+  return {
+    date: tournamentStartDate.toISOString(),
+    totalUsers: validAggregations.length,
+    eligibleUsers: validAggregations.filter((agg) => agg.isEligible).length,
+    deletedOldEntries: deletedCount.count,
+  };
 };
 
 const assignRanksToEligibleUsers = async (date: Date) => {
@@ -265,5 +275,57 @@ const assignRanksToEligibleUsers = async (date: Date) => {
     },
   });
 
-  console.log('Assigned ranks to eligible users');
+  const eligibleCount = await prisma.dailyUserLeaderboard.count({
+    where: { date, isEligible: true },
+  });
+
+  console.log(`✅ Assigned ranks to ${eligibleCount} eligible users`);
+};
+
+export const getTop10PercentUsers = async (date: Date) => {
+  const eligibleUsers = await prisma.dailyUserLeaderboard.findMany({
+    where: {
+      date,
+      isEligible: true,
+    },
+    orderBy: {
+      rank: 'asc',
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          coins: true,
+        },
+      },
+    },
+  });
+
+  const totalEligible = eligibleUsers.length;
+  const top10PercentCount = Math.ceil(totalEligible * 0.1);
+
+  const top10Percent = eligibleUsers.slice(0, top10PercentCount);
+
+  console.log(`📈 Total eligible users: ${totalEligible}`);
+  console.log(`🏆 Top 10% users: ${top10PercentCount}`);
+
+  return {
+    topUsers: top10Percent,
+    stats: {
+      totalEligible,
+      top10PercentCount,
+      percentile: 10,
+    },
+  };
+};
+
+export const getDailyUserLeaderboardHandler = async (today: Date) => {
+  const leaderboard = await prisma.dailyUserLeaderboard.findMany({
+    where: {
+      date: today,
+    },
+  });
+
+  return leaderboard;
 };

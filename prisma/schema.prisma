@@ -109,7 +109,8 @@ model User {
   referralsGiven    Referral[]    @relation("Referrer")
   referralsReceived Referral[]    @relation("Referee")
 
-  coinLedger CoinLedger[]
+  coinLedger           CoinLedger[]
+  dailyUserLeaderboard DailyUserLeaderboard[]
 
   @@index([username])
   @@index([phoneNumber])
@@ -321,6 +322,7 @@ model InstantLeaderboard {
 model DailyUserLeaderboard {
   id     String   @id @default(cuid())
   userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   date   DateTime
 
   dailyCoinPoints   Int     @default(0)

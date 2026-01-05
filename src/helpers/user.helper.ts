@@ -1,4 +1,3 @@
-import { sourceMapsEnabled } from 'process';
 import { Prisma } from '../generated/prisma';
 import prisma from '../prisma';
 import { ApiError } from '../utils/api/ApiError';
