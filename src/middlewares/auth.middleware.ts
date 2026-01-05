@@ -36,8 +36,8 @@ export const verifyUser = async (
 
     // const userId = 'cmjog0zue0000f2g41u0ja8d8';
     // const userId = 'cmjq7xbbo0000k5g4ulu0fwnq';
-    // const userId = 'cmjq7xp3c0001k5g4h2stergz';
-    const userId = 'cmjq7xvty0002k5g4za159b1o';
+    const userId = 'cmjq7xp3c0001k5g4h2stergz';
+    // const userId = 'cmjq7xvty0002k5g4za159b1o';
     if (!userId)
       throw new ApiError({ statusCode: 400, message: 'Empty user id field' });
 
