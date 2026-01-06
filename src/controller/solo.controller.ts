@@ -23,9 +23,9 @@ export const startSolo = async (req: Request, res: Response) => {
       // Remove answer (correctDigit)
       // send Qs-set to Frontend
       // 
-      // console.log(req.body);
+      // console.log("- - ",req.userData);
       
-      const { userData } = req.body;
+      const { userData } = req;
       const userId = userData.id; 
       const totalQuestionsInRun = gameConfig.single_player.round_size;
       const freeAttemptsAllowed = gameConfig.single_player.daily_free_attempts;
@@ -43,9 +43,10 @@ export const startSolo = async (req: Request, res: Response) => {
         },
       });
       if (updatedUser.soloAttemptCount > freeAttemptsAllowed) {
-        return res
-          .status(501)
-          .send('No Free Attempt Available for Today');
+        throw new ApiError({
+            statusCode: 501,
+            message: 'No Free Attempt Available for Today',
+        });
       }
       let question: QuestionData;
       question = await generateQuestion(1);
@@ -93,18 +94,24 @@ export const startSolo = async (req: Request, res: Response) => {
       // const sanitizedQuestion = {...clientSafeQuestion, questionId: createdQuestion.id};
       const sanitizedQuestion = clientSafeQuestion;
       
-      return res.status(201).json({sanitizedQuestion, sanitizedAttemp});
+      return res.status(201).json(new ApiResponse(
+        200,
+        {sanitizedQuestion, sanitizedAttemp},
+        'successfuly created soloSession'
+      ));
     } catch (error) {
       console.error('start Solo error:', error);
-      return res
-        .status(500)
-        .json(new ApiResponse(500, 'Failed to start Solo'));
+      throw new ApiError({
+          statusCode: 500,
+          message: 'Failed to start Solo',
+      }); 
     }
 }
 
 export const continueSolo = async (req: Request, res: Response) => {
   try {
-    const {soloSessionId, userData} = req.body;
+    const { soloSessionId } = req.body;
+    const { userData } = req;
     const userId = userData.id;
     console.log(req.body);
     
@@ -140,14 +147,16 @@ export const continueSolo = async (req: Request, res: Response) => {
       });
     }
     if (session.userId !== userId) {
-      return res
-        .status(403)
-        .json(new ApiResponse(403, 'Not authorized for this session'));
+      throw new ApiError({
+        statusCode: 403,
+        message: 'Not authorized for this session',
+      });
     }
     if (session.status !== "IN_PROGRESS") {
-      return res
-        .status(400)
-        .json(new ApiResponse(400, 'Session is not active'));
+      throw new ApiError({
+        statusCode: 400,
+        message: 'Session is not active',
+      });
     }
   
     const roundSize = gameConfig.single_player.round_size;
@@ -202,25 +211,31 @@ export const continueSolo = async (req: Request, res: Response) => {
     console.log("new Session : ",updatedSession, " len : ",questionCount, " last qs : ", updatedSession.questions[questionCount-1]);
     const sanitizedQuestion = {...clientSafeQuestion, "id": updatedSession.questions[questionCount-1].id};
     // const sanitizedQuestion = {...clientSafeQuestion};
-    return res.status(200).json({
-      message: 'Next round started successfully',
-      isRoundCompleted: false,
-      bankedPoints: updatedSession.bankedPoints, 
-      round: updatedSession.currentRound,
-      level: updatedSession.currentLevel,
-      questions: sanitizedQuestion,
-    });
+
+    return res.status(200).json(new ApiResponse(
+      200,
+      {
+        isRoundCompleted: false,
+        bankedPoints: updatedSession.bankedPoints, 
+        round: updatedSession.currentRound,
+        level: updatedSession.currentLevel,
+        questions: sanitizedQuestion,
+      },
+      'Next round started successfully'
+    ));
   } catch (error) {
     console.error('continueSolo error:', error);
-    return res
-        .status(500)
-        .json(new ApiResponse(500, 'Failed to continue solo session'));
+    throw new ApiError({
+        statusCode: 500,
+        message: 'Failed to continue solo session',
+    });
   }
 }
 
 export const quitSolo  = async (req: Request, res: Response) => {
   try {      
-    const {soloSessionId, userData} = req.body;
+    const { soloSessionId } = req.body;
+    const { userData } = req;
     const userId = userData.id;
     if(!soloSessionId || !userId){
       throw new ApiError({
@@ -285,17 +300,22 @@ export const quitSolo  = async (req: Request, res: Response) => {
       });
     }
   
-    return res.status(200).json({
-      message: 'You can leave this window.',
-      sessionEnded: true,
-      finalPoint: finalPoint,
-      roundsCompleted: session.currentRound,
-    });
+    return res.status(200).json(
+      new ApiResponse(
+      200,
+      {
+        sessionEnded: true,
+        finalPoint: finalPoint,
+        roundsCompleted: session.currentRound,
+      },
+      'You can leave this window.'
+    ));
   } catch (error) {
     console.error('quitSolo error:', error);
-    return res
-        .status(500)
-        .json(new ApiResponse(500, 'Failed to quit solo session, Try Again ! !'));
+    throw new ApiError({
+        statusCode: 500,
+        message: 'Failed to quit solo session, Try Again ! !',
+    });
   }
 
 }
@@ -303,22 +323,22 @@ export const quitSolo  = async (req: Request, res: Response) => {
 export const nextQuestion  = async (req: Request, res: Response) => {
   try {
     const { soloSessionId, questionId, userAnswer, time} = req.body;
-    const {userData} = req.body;
+    const {userData} = req;
     const userId = userData.id;
     // const soloSessionId = userData.soloSessionId;
     console.log("next : ",req.body);
     
     const today = new Date();
     if(!soloSessionId || !userId || !questionId || (userAnswer === null || userAnswer === undefined) || !time){
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: userId, soloSessionId, questionId, userAnswer, time',
+      throw new ApiError({
+          statusCode: 400,
+          message: 'Missing required fields: userId, soloSessionId, questionId, userAnswer, time',
       });
     }
     if (typeof userAnswer !== 'number' || userAnswer < 0 || userAnswer > 9) {
-      return res.status(400).json({
-        success: false,
-        message: 'userAnswer must be a number between 0 and 9',
+      throw new ApiError({
+          statusCode: 400,
+          message: 'userAnswer must be a number between 0 and 9',
       });
     }
     console.log("time : ",today);
@@ -352,15 +372,15 @@ export const nextQuestion  = async (req: Request, res: Response) => {
     
     const question = session.questions.find((q) => q.id === questionId);
     if (!question) {
-      return res.status(404).json({
-        success: false,
-        message: 'Question not found in this session',
+      throw new ApiError({
+          statusCode: 400,
+          message: `Question not found in this session`,
       });
     }
     if (question.soloSessionId !== soloSessionId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Question does not belong to this session',
+      throw new ApiError({
+          statusCode: 400,
+          message: `Question does not belong to this session`,
       });
     }
     console.log("qs : ",question);
@@ -386,16 +406,18 @@ export const nextQuestion  = async (req: Request, res: Response) => {
       // if yes, dont generate new Question, show option - QUIT / CONTINUE 
       const roundCompleted = (updatedSession.questionsAnswered % gameConfig.single_player.round_size) === 0;
       if(roundCompleted){
-        // SHOW an ADD
-        res.status(201).json({
-          success: true,
-          isCorrect: true,
-          isRoundCompleted: true,
-          roundNumber: updatedSession.currentRound,
-          correctAnswer: question.correctDigit,
-          bankedPoint: updatedSession.bankedPoints,
-          message: `${session.currentRound} completed. Select CONTINUE to move ahead.`
-        })
+        res.status(201).json(new ApiResponse (
+          200,
+          {
+            success: true,
+            isCorrect: true,
+            isRoundCompleted: true,
+            roundNumber: updatedSession.currentRound,
+            correctAnswer: question.correctDigit,
+            bankedPoint: updatedSession.bankedPoints,
+          },
+          `${session.currentRound} completed. Select CONTINUE to move ahead.`
+        ))
       } else {
         const nextGeneratedSeed = generateSeed();
         let nextGeneratedQuestion: QuestionData;
@@ -416,15 +438,19 @@ export const nextQuestion  = async (req: Request, res: Response) => {
         const { id, expression, kthDigit, level, side } = newNextQuestion;
         const sanitizedQuestion = {id,expression,kthDigit,level,side};
       
-        return res.json({
-          success: true,
-          isCorrect: true,
-          isRoundCompleted: false,
-          correctAnswer: question.correctDigit,
-          roundNumber: updatedSession.currentRound,
-          bankedPoint: updatedSession.bankedPoints,
-          nextQuestion: sanitizedQuestion
-        });
+        return res.json(new ApiResponse(
+          200,
+          {
+            success: true,
+            isCorrect: true,
+            isRoundCompleted: false,
+            correctAnswer: question.correctDigit,
+            roundNumber: updatedSession.currentRound,
+            bankedPoint: updatedSession.bankedPoints,
+            nextQuestion: sanitizedQuestion
+          },
+          'Next Question Created'
+        ));
       }
     }
     if (!isCorrect && !session.madeMistake) {
@@ -441,20 +467,21 @@ export const nextQuestion  = async (req: Request, res: Response) => {
         },
       });
       // implement urils.api.ApiResponse
-      return res.json({
-        success: false,
-        gameOver: true,
-        reason: 'MISTAKE',
-        finalScore: finalScore,
-        correctAnswer: question.correctDigit,
-        message: 'Wrong answer! Game over. Final score is 50% of banked points.',
-      });
+      return res.json(new ApiResponse(
+        200,
+        {
+          success: false,
+          gameOver: true,
+          reason: 'MISTAKE',
+          finalScore: finalScore,
+          correctAnswer: question.correctDigit,
+        },
+        'Wrong answer! Game over. Final score is 50% of banked points.'
+      ));
     }
   } catch (error) {
     console.log("Error in generating next Question",error);
-    return res
-        .status(500)
-        .json(new ApiResponse(500, 'Failed to generate next question, Try Again ! !'));
+    throw new ApiError({ statusCode: 500, message: 'Error in generating next Question' });
   }
 }
 
@@ -464,12 +491,9 @@ export const finalSessionSubmission  = async (req: Request, res: Response) => {
     const userId = userData.id;
     const soloSessionId = userData.soloSessionId;
     if (!soloSessionId || !userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required field: soloSessionId, userId',
-      });
+      throw new ApiError({ statusCode: 404, message: 'Missing required field: soloSessionId, userId' });
     }
-  
+    
     const session = await prisma.soloSession.findUnique({
       where: { id: soloSessionId },
       include: {
@@ -482,49 +506,37 @@ export const finalSessionSubmission  = async (req: Request, res: Response) => {
       },
     });
     if (!session) {
-      return res.status(404).json({
-        success: false,
-        message: 'Session not found',
-      });
+      throw new ApiError({ statusCode: 404, message: 'Session not found' });
     }
     if (session.userId !== userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Unauthorized: Session does not belong to this user',
-      });
+      throw new ApiError({ statusCode: 403, message: 'Unauthorized: Session does not belong to this user' });
     }
     if (session.status !== 'IN_PROGRESS') {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot finalize session: Session is already ${session.status}`,
-      });
+      throw new ApiError({ statusCode: 400, message: `Cannot finalize session: Session is already ${session.status}` });
     }
     const user = await prisma.user.findUnique({
       where: { id: userId }
     });
     if(!user){
-      return res.status(404).json({
-        success: false,
-        message: 'user not found',
-      });
+      throw new ApiError({ statusCode: 404, message: 'user not found' });
     }
-  
+    
     const isRoundComplete = session.questionsAnswered % 5 === 0;
     let finalPoint: number;
     let midRoundPenalty = false;
-  
+    
     if (!isRoundComplete && session.questionsAnswered > 0) {
       finalPoint = Math.floor(session.bankedPoints / 2);
       midRoundPenalty = true;
     } else {
       finalPoint = session.currentRound * gameConfig.single_player.points_per_round_factor;
     }
-  
+    
     const totalQuestions = session.questionsAnswered;
     const correctAnswers = session.correctAnswers;
     const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100 * 100) / 100 : 0;
     const roundsCompleted = Math.floor(totalQuestions / gameConfig.single_player.round_size);
-  
+    
     await prisma.soloSession.update({
       where: { id: soloSessionId },
       data: {
@@ -534,46 +546,43 @@ export const finalSessionSubmission  = async (req: Request, res: Response) => {
         quitEarly: false,
       },
     });
-  
-    return res.status(201).json({
-      finalPoint: finalPoint,
-      roundsCompleted: roundsCompleted,
-      accuracy: accuracy,
-      message: 'You can leave this window.',
-      sessionEnded: true,
-      success: false,
-    })
+    
+    return res.status(201).json(new ApiResponse(
+      200,
+      {
+        finalPoint: finalPoint,
+        roundsCompleted: roundsCompleted,
+        accuracy: accuracy,
+        sessionEnded: true,
+        success: false,
+      },
+      'You can leave this window.'
+    ));
   } catch (error) {
     console.log('Error in Submission. Try Again ! !');
-    res.status(500).send('Error in Submission. Try Again ! !');
+    throw new ApiError({ statusCode: 505, message: 'Error in Submission. Try Again ! !' });
   }
 }
 
 export const getRemainingSoloAttempts = async ( req: Request, res: Response ) => {
   try {
-    const {userData} = req.body;
+    const {userData} = req;
     const userId = userData.id;
     console.log("id :- ",userId);
     
     if (!userId) {
-      return res.status(401).json({
-        ok: false,
-        error: "Unauthorized",
-      });
+      throw new ApiError({ statusCode: 401, message: 'Unauthorized' });
     }
-
+    
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         soloAttemptCount: true,
       },
     });
-
+    
     if (!user) {
-      return res.status(404).json({
-        ok: false,
-        error: "User not found",
-      });
+      throw new ApiError({ statusCode: 404, message: 'User not found' });
     }
     console.log("user",user);
     
@@ -584,38 +593,37 @@ export const getRemainingSoloAttempts = async ( req: Request, res: Response ) =>
       },
       orderBy: { createdAt: "desc" },
     });
-
+    
     if (!config) {
-      return res.status(500).json({
-        ok: false,
-        error: "Active game config not found",
-      });
+      throw new ApiError({ statusCode: 500, message: 'Active game config not found' });
     }
     console.log("config ",config);
-
+    
     const singlePlayerConfig = config.single_player as {
       daily_free_attempts: number;
     };
 
     const maxDailyAttempts =
-      singlePlayerConfig.daily_free_attempts ?? 0;
-
+    singlePlayerConfig.daily_free_attempts ?? 0;
+    
     const remainingAttempts = Math.max( maxDailyAttempts - user.soloAttemptCount, 0 );
-
-    return res.status(200).json({
-      ok: true,
-      data: {
-        totalDailyAttempts: maxDailyAttempts,
-        usedAttempts: user.soloAttemptCount,
-        remainingAttempts,
+    
+    return res.status(200).json(new ApiResponse(
+      200,
+      {
+        ok: true,
+        data: {
+          totalDailyAttempts: maxDailyAttempts,
+          usedAttempts: user.soloAttemptCount,
+          remainingAttempts,
+        },
       },
-    });
+      'attemps fetched.'
+    ));
   } catch (error) {
     console.error("getRemainingSoloAttempts error:", error);
-    return res.status(500).json({
-      ok: false,
-      error: "Internal server error",
-    });
+    throw new ApiError({ statusCode: 500, message: 'Internal server error' });
+
   }
 };
 
@@ -663,6 +671,7 @@ function getIstRange(dateStr: string) {
   return { start, end };
 }
 
+// ApiResponce, ApiError Not Implemented
 export const leaderboard = async (req: Request, res: Response) => {
   try {
     const { todayDate, start = 1, end = 10 } = req.body;
