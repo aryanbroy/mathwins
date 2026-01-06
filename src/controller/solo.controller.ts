@@ -110,9 +110,10 @@ export const startSolo = async (req: Request, res: Response) => {
 
 export const continueSolo = async (req: Request, res: Response) => {
   try {
-    const { soloSessionId } = req.body;
+    const { sessionId } = req.body;
     const { userData } = req;
     const userId = userData.id;
+    const soloSessionId = sessionId;
     console.log(req.body);
     
     if(!userId || !soloSessionId){
@@ -234,9 +235,10 @@ export const continueSolo = async (req: Request, res: Response) => {
 
 export const quitSolo  = async (req: Request, res: Response) => {
   try {      
-    const { soloSessionId } = req.body;
+    const { sessionId } = req.body;
     const { userData } = req;
     const userId = userData.id;
+    const soloSessionId = sessionId;
     if(!soloSessionId || !userId){
       throw new ApiError({
           statusCode: 400,
@@ -612,11 +614,9 @@ export const getRemainingSoloAttempts = async ( req: Request, res: Response ) =>
       200,
       {
         ok: true,
-        data: {
-          totalDailyAttempts: maxDailyAttempts,
-          usedAttempts: user.soloAttemptCount,
-          remainingAttempts,
-        },
+        totalDailyAttempts: maxDailyAttempts,
+        usedAttempts: user.soloAttemptCount,
+        remainingAttempts,
       },
       'attemps fetched.'
     ));

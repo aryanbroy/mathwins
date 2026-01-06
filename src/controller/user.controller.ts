@@ -76,12 +76,14 @@ export const getUser = async (req: Request, res: Response) => {
     const JWT_SECRET = process.env.JWT_SECRET as string;
     const user = jwt.verify(token, JWT_SECRET);
     console.log(user);
-    return res.status(200).json(user);
-    
+    return res.status(200).json(new ApiResponse(
+      200,
+      user,
+      'user created'
+    ));
   } catch (error) {
     console.log(error);
-    
-    return res.status(500).send(error);
+    throw new ApiError({ statusCode: 500, message: 'Internal server error' });
   }
 };
 
