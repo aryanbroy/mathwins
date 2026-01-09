@@ -241,9 +241,10 @@ export const LevelDown = async (req: Request, res: Response) => {
     console.log('New question created at lower level:', newQuestion);
 
     // Sanitize question for frontend
-    const { id, expression, kthDigit, level, side } = newQuestion;
+    const { id, questionIndex, expression, kthDigit, level, side } = newQuestion;
     const sanitizedQuestion = {
       id,
+      questionIndex,
       expression,
       kthDigit,
       level,

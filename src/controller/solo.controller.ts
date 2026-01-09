@@ -61,6 +61,7 @@ export const startSolo = async (req: Request, res: Response) => {
           status: 'IN_PROGRESS',
           questions: {
             create: {
+              questionIndex: 1,
               level: question.level,
               expression: question.expression,
               result: question.result,
@@ -74,6 +75,7 @@ export const startSolo = async (req: Request, res: Response) => {
           questions: {
             select: {
               id: true,
+              questionIndex: true,
               level: true,
               expression: true,
               result: true,
@@ -197,6 +199,7 @@ export const continueSolo = async (req: Request, res: Response) => {
         questions: {
           select: {
             id: true,
+            questionIndex: true,
             level: true,
             expression: true,
             result: true,
@@ -437,8 +440,8 @@ export const nextQuestion  = async (req: Request, res: Response) => {
           },
         })
         console.log("question created : ", newNextQuestion);
-        const { id, expression, kthDigit, level, side } = newNextQuestion;
-        const sanitizedQuestion = {id,expression,kthDigit,level,side};
+        const { id, questionIndex, expression, kthDigit, level, side } = newNextQuestion;
+        const sanitizedQuestion = {id,questionIndex,expression,kthDigit,level,side};
       
         return res.json(new ApiResponse(
           200,
