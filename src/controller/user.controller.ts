@@ -24,7 +24,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
 
 export const createUser = async (req: Request, res: Response) => {
   const { username, email, picture } = req.body;
-  console.log(req.body);
+  console.log("createUser :- ",req.body);
   
   if (!username || !email) {
     throw new ApiError({
