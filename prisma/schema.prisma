@@ -105,6 +105,11 @@ model User {
   dailyLeaderBoards  DailyLeaderboard[]
   instantLeaderboard InstantLeaderboard[]
 
+  currentLoginStreak  Int       @default(0)
+  longestLoginStreak  Int       @default(0)
+  lastLoginRewardDate DateTime?
+  totalLoginDays      Int       @default(0)
+
   rewardClaim       RewardClaim[]
   referralsGiven    Referral[]    @relation("Referrer")
   referralsReceived Referral[]    @relation("Referee")
@@ -421,6 +426,7 @@ enum CoinLedgerSource {
   REWARD_LOCK
   REWARD_UNLOCK
   REDEMPTION
+  DAILY_LOGIN
 }
 
 model CoinLedger {

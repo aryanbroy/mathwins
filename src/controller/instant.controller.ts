@@ -186,6 +186,7 @@ export const submitQuestion = asyncHandler(
       throw new ApiError({ statusCode: 401, message: 'Unauthorized user' });
     }
     let { sessionId, questionId, answer, timeTakenMs } = req.body;
+    console.log(sessionId, questionId, answer, timeTakenMs);
     if (
       !sessionId ||
       !questionId ||

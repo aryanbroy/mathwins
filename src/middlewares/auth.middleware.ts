@@ -50,8 +50,8 @@ export const verifyUser = async (
     if (!user)
       throw new ApiError({ statusCode: 404, message: 'User not authorized' });
 
-    req.body.userData = user;
-    // req.userData = user;
+    // req.body.userData = user;
+    req.userData = user;
 
     // req.userId = userId;
     // req.soloAttemptCount = user.soloAttemptCount;

@@ -6,6 +6,7 @@ export const SOURCE_LABEL_MAP: Record<CoinLedgerSource, string> = {
   REWARD_LOCK: 'Reward claim initiated',
   REWARD_UNLOCK: 'Reward claim rejected',
   REDEMPTION: 'Reward redeemed',
+  DAILY_LOGIN: 'Daily login',
 };
 
 export const CLAIM_STATUS_MAP: Record<ClaimStatus, string> = {
