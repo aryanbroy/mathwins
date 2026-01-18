@@ -75,14 +75,13 @@ export const fetchDailyTournament = async (req: Request, res: Response) => {
 
 export const createDailyTournament = asyncHandler(
   async (req: Request, res: Response) => {
-    const { userData } = req;
-    const { id } = userData;
-    if (!id) {
-      throw new ApiError({
-        statusCode: 400,
-        message: 'Invalid user id',
-      });
-    }
+    // const {userId: id} = req
+    // if (!id) {
+    //   throw new ApiError({
+    //     statusCode: 400,
+    //     message: 'Invalid user id',
+    //   });
+    // }
 
     const today = new Date();
     const tournamentStartDate = new Date(

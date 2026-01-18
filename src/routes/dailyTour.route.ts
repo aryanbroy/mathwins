@@ -10,11 +10,12 @@ import {
   submitQuestion,
 } from '../controller/dailyTour.controller';
 import { verifyUser } from '../middlewares/auth.middleware';
+import { isAdmin } from '../middlewares/adminAuth.middleware';
 
 const router = Router();
 
 router.get('/attempts', verifyUser, fetchDailyAttempts);
-router.post('/create', verifyUser, createDailyTournament);
+router.post('/create', isAdmin, createDailyTournament);
 router.get('/start', verifyUser, fetchDailyTournament);
 
 router.post('/session/create', verifyUser, createDailyTournamentSession);
