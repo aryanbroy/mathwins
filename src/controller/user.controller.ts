@@ -24,16 +24,15 @@ export const getAllUsers = async (req: Request, res: Response) => {
 
 export const createUser = async (req: Request, res: Response) => {
   const { username, email, picture } = req.body;
-  console.log("createUser :- ",req.body);
-  
+  console.log('createUser :- ', req.body);
+
   if (!username || !email) {
     throw new ApiError({
       statusCode: 400,
       message: 'Received empty fields: username or email',
     });
   }
-  console.log("name : ",username," email : ",email);
-  
+  console.log('name : ', username, ' email : ', email);
 
   const usernameExists = await prisma.user.findFirst({
     where: {
@@ -48,7 +47,7 @@ export const createUser = async (req: Request, res: Response) => {
       message: 'Username already exists',
     });
   }
-  
+
   const generateNewReferralCode = generateReferralCode(email);
   const user = await prisma.user.create({
     data: {
@@ -60,6 +59,7 @@ export const createUser = async (req: Request, res: Response) => {
   });
   const userId = user.id;
   const JWT_SECRET = process.env.JWT_SECRET as string;
+  console.log('JWT secret: ', JWT_SECRET);
   const jwtSting = jwt.sign({ userId, username, email, picture }, JWT_SECRET, {
     expiresIn: '7d',
   });
@@ -70,17 +70,14 @@ export const createUser = async (req: Request, res: Response) => {
 
 export const getUser = async (req: Request, res: Response) => {
   try {
-    const {token} = req.body;
-    console.log(token);
-    
+    const { token } = req.body;
+    console.log('Token: ', token);
+
     const JWT_SECRET = process.env.JWT_SECRET as string;
+    console.log('jwt secret: ', JWT_SECRET);
     const user = jwt.verify(token, JWT_SECRET);
     console.log(user);
-    return res.status(200).json(new ApiResponse(
-      200,
-      user,
-      'user created'
-    ));
+    return res.status(200).json(new ApiResponse(200, user, 'user created'));
   } catch (error) {
     console.log(error);
     throw new ApiError({ statusCode: 500, message: 'Internal server error' });
@@ -89,7 +86,7 @@ export const getUser = async (req: Request, res: Response) => {
 
 export const getCoinsSummary = asyncHandler(
   async (req: Request, res: Response) => {
-    const {userData} = req.body;
+    const { userData } = req.body;
     const userId = userData.id;
     if (!userId) {
       throw new ApiError({
@@ -111,7 +108,7 @@ export const getCoinsSummary = asyncHandler(
 
 export const getTransactionHistory = asyncHandler(
   async (req: Request, res: Response) => {
-    const {userData} = req.body;
+    const { userData } = req.body;
     const userId = userData.id;
     if (!userId) {
       throw new ApiError({
