@@ -46,8 +46,8 @@ app.use('/api/instant', instantRouter);
 app.use('/api/rewards', rewardsRoute);
 app.use('/api/lifeline', lifelineRoute);
 
-// // app.use('/api/admin/login', adminLogin);
-// app.use('/api/admin/', adminRoute);
+// app.use('/api/admin/login', adminLogin);
+app.use('/api/admin/', adminRoute);
 
 app.use(errorHandler);
 

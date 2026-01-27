@@ -42,12 +42,12 @@ export const startSolo = async (req: Request, res: Response) => {
           },
         },
       });
-      if (updatedUser.soloAttemptCount > freeAttemptsAllowed) {
-        throw new ApiError({
-            statusCode: 501,
-            message: 'No Free Attempt Available for Today',
-        });
-      }
+      // if (updatedUser.soloAttemptCount > freeAttemptsAllowed) {
+      //   throw new ApiError({
+      //       statusCode: 501,
+      //       message: 'No Free Attempt Available for Today',
+      //   });
+      // }
       let question: QuestionData;
       question = await generateQuestion(1);
       console.log("qs : ",question);

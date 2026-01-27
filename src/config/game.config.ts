@@ -35,7 +35,7 @@ const gameConfig = {
     level_increase_every_n_questions: 2,
     round_timeout_sec: 60, // time for an entire round
     free_rounds_before_ad: 3, // number of rounds before rewarded ad is required to continue
-    daily_free_attempts: 10,
+    daily_free_attempts: 5,
     revive_rewarded_after_rounds: 3, // show rewarded ad after N rounds to continue
     banner_enabled: true,
     interstitial_after_round: true,
