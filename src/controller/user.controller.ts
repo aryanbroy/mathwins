@@ -11,12 +11,25 @@ import {
 } from '../helpers/user.helper';
 import { ADMIN_EMAILS } from "../config/admin";
 
-function generateReferralCode(email?: string, phone?: string): string {
-  const source = (email || phone || '').toLowerCase().trim();
+async function generateReferralCode(email?: string, phone?: string):Promise<string>{
+  let code:string = '';
+  let isUnique = false;
 
-  const hash = crypto.createHash('sha256').update(source).digest('base64url'); // URL-safe
+  while (!isUnique) {
+    // Generate code
+    const hash = crypto.createHash('sha256').update(email! + Math.random()).digest('hex');
+    code = hash.slice(0, 8).toUpperCase();
 
-  return hash.slice(0, 8).toUpperCase();
+    // Check database
+    const existing = await prisma.user.findFirst({
+      where: {
+        referralCode: code,
+      },
+    });
+    if (!existing) isUnique = true;
+  }
+  
+  return code;
 }
 
 export const getAllUsers = async (req: Request, res: Response) => {
@@ -55,9 +68,10 @@ export const createUser = async (req: Request, res: Response) => {
   // check if referralCode exists or active for now
   // if so then create new user accordingly and change exixsting DB
   let referrer = null;
-  if (referralCode) {
+  const refinedReferralCode = referralCode.trim();
+  if (refinedReferralCode) {
     referrer = await prisma.user.findUnique({
-      where: { referralCode },
+      where: { referralCode: refinedReferralCode },
     });
 
     if (!referrer) {
@@ -67,11 +81,11 @@ export const createUser = async (req: Request, res: Response) => {
       });
     }
   }
-
-  const generateNewReferralCode = generateReferralCode(email);
+  const usernameFromEmail = email.split('@')[0];
+  const generateNewReferralCode = await generateReferralCode(email);
   const user = await prisma.user.create({
     data: {
-      username,
+      username: usernameFromEmail,
       email,
       profilePictureUrl: picture,
       referralCode: generateNewReferralCode,
@@ -84,29 +98,19 @@ export const createUser = async (req: Request, res: Response) => {
 
   //
   if (referrer) {
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: referrer.id },
-        data: {
-          coins: { increment: 200 }, // change - game.config
-          lifetimeCoins: { increment: 200 }, // change - game.config
+    const referral = await prisma.referral.create({
+      data: {
+        referrer: {
+          connect: { id: referrer.id }
         },
-      }),
-      
-      prisma.referral.create({
-        data: {
-          referrer: {
-            connect: { id: referrer.id }
-          },
-          referee: {
-            connect: { id: user.id }
-          },
-          referralCode: referralCode,
+        referee: {
+          connect: { id: user.id }
         },
-      }),
-    ]);
+        referralCode: refinedReferralCode,
+        status: "PENDING"
+      },
+    })
   }
-
   const userId = user.id;
   const JWT_SECRET = process.env.JWT_SECRET as string;
   const jwtSting = jwt.sign({ userId, username, email, picture, referralCode: generateNewReferralCode }, JWT_SECRET, {
@@ -124,12 +128,14 @@ export const getUser = async (req: Request, res: Response) => {
 
     const JWT_SECRET = process.env.JWT_SECRET as string;
     const user:any = jwt.verify(token, JWT_SECRET);
-    // console.log("getUser :- ",user);
+    console.log("getUser :- ",user);
     const existingUser:any = await prisma.user.findFirst({
       where: {
         id: user.userId,
       },
     });
+    console.log("existing ", existingUser);
+    
     const isAdmin = ADMIN_EMAILS.includes(existingUser.email);
     return res.status(200).json(new ApiResponse(200, {...user, coins: existingUser.lifetimeCoins, isAdmin}, 'user created'));
   } catch (error) {

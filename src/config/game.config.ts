@@ -178,12 +178,11 @@ const gameConfig = {
 
   // 10) Referral / Growth config (RF-1 / RF-2)
   referrals: {
+    required_games_for_referral_coins: 1,
     referrer_coins: 50,
     referee_coins: 20,
-    one_referrer_per_user: true,
-    deep_link_template: 'app://r/{code}',
+    one_referrer_per_user: false,
     prevent_self_referral: true,
-    expire_days: 30,
   },
 
   // 11) Rewards & Claims thresholds (RW-1..RW-3)
