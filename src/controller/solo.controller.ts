@@ -58,9 +58,19 @@ export const startSolo = async (req: Request, res: Response) => {
       // give coins to both updatedUser.id and updatedUser.referredById 
       const { required_games_for_referral_coins } = (config.referrals as any);
       const totalGames : number = updatedUser.soloAttemptCount + updatedUser.dailyAttemptCount + updatedUser.instantAttemptCount;
-      if (totalGames === required_games_for_referral_coins){
+      if (totalGames === required_games_for_referral_coins && updatedUser.referredById){
         const referrerIdByUser = updatedUser.referredById;
         if(!referrerIdByUser){
+          await prisma.user.update({
+            where: {
+              id: userId,
+            },
+            data: {
+              soloAttemptCount: {
+                decrement: 1
+              },
+            },
+          });
           throw new ApiError({ statusCode: 500, message: 'No referrerId Found'});
         }
         const referral = await prisma.referral.findFirst({
@@ -70,6 +80,16 @@ export const startSolo = async (req: Request, res: Response) => {
           },
         });
         if (!referral) {
+          await prisma.user.update({
+            where: {
+              id: userId,
+            },
+            data: {
+              soloAttemptCount: {
+                decrement: 1
+              },
+            },
+          });
           throw new ApiError({ statusCode: 500, message: 'No referral or already rewarded'});
         }
         const {referrerId,id: referralId,} = referral;

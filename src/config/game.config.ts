@@ -8,6 +8,8 @@ const gameConfig = {
 
   // 1) Tournament / Game mode configs
   daily_tournament: {
+    free_rounds_before_ad: 3,
+    daily_free_attempts: 3,
     duration_sec: 300, // total match length in seconds (5 minutes)
     breaks_sec: [60, 120, 180, 240], // minute breakpoints for leaderboards
     extra_attempts_rewarded: 3, // rewarded ad grant on replay
@@ -19,6 +21,8 @@ const gameConfig = {
   },
   // 2
   instant_tournament: {
+    free_rounds_before_ad: 3,
+    daily_free_attempts: 3,
     room_size_max: 100,
     room_wait_timeout_sec: 1200, // 20 minutes TTL for room creation
     match_duration_sec: 180, // player session length (3 minutes)
@@ -29,13 +33,13 @@ const gameConfig = {
   },
 
   single_player: {
+    free_rounds_before_ad: 3, // number of rounds before rewarded ad is required to continue
+    daily_free_attempts: 3,
     round_size: 5, // questions per round
     points_per_round_factor: 0.03, // as PRD: used to compute points per round
     point_for_correct_answer: 1, // legacy fallback per-question points (kept for backward compat)
     level_increase_every_n_questions: 2,
     round_timeout_sec: 60, // time for an entire round
-    free_rounds_before_ad: 3, // number of rounds before rewarded ad is required to continue
-    daily_free_attempts: 5,
     revive_rewarded_after_rounds: 3, // show rewarded ad after N rounds to continue
     banner_enabled: true,
     interstitial_after_round: true,
