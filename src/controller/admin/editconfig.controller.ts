@@ -118,9 +118,10 @@ export const getActiveGameConfig = async (req: Request, res: Response) => {
 export const changeConfig = async (req: any, res: any) => {
     try {
         const section = req.query.section as string; // column name
-        const {payload} = req.body;
+        const {payload, note} = req.body;
         console.log("section : ",section);
         console.log("payload : ",payload);
+        console.log("note : ",note);
         
         if (!section) {
         return res.status(400).json({
@@ -147,27 +148,28 @@ export const changeConfig = async (req: any, res: any) => {
 
         const activeConfig = await getActiveConfig();
 
-        // 4️⃣ Build new config row (copy all columns)
+        // Build new config row (copy all columns)
+        const updatedBy = req.email || 'system';
         const newConfigData: any = {
         ...activeConfig,
         id: undefined,          // important: let Prisma generate new ID
         createdAt: undefined,
         isActive: true,
         version: bumpPatchVersion(activeConfig.version),
-        updatedBy: req.body?.user!.email,
-        notes: `Updated ${section}`,
+        updatedBy,
+        notes: req.body?.note || `Updated ${section} by ${updatedBy}`,
         };
 
-        // 5️⃣ Replace only the requested section
+        // Replace only the requested section
         newConfigData[section] = parsed.data;
 
-        // 6️⃣ Deactivate old config
+        // Deactivate old config
         await prisma.gameConfig.updateMany({
         where: { isActive: true },
         data: { isActive: false },
         });
 
-        // 7️⃣ Create new config row
+        // Create new config row
         const saved = await prisma.gameConfig.create({
         data: newConfigData,
         });

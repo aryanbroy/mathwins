@@ -1,0 +1,477 @@
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider   = "prisma-client-js"
+  output     = "../src/generated/prisma"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum AvatarType {
+  DEFAULT
+  UPLOADED
+}
+
+enum Theme {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+enum TransactionType {
+  INCREMENT
+  DECREMENT
+}
+
+enum TransactionDescription {
+  SINGLE_PLAYER
+  DAILY_TOURNAMENT
+  INSTANT_TOURNAMENT
+  REFERRAL_POINT
+  REWARD_CLAIM
+}
+
+enum UserTournamentStatus {
+  NOT_OPENED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TournamentStatus {
+  NOT_OPENED
+  OPEN
+  CLOSED
+  FULL
+  CANCELLED
+}
+
+enum InstantTournamentSessionStatus {
+  ACTIVE
+  SUBMITTED
+  EXPIRED
+}
+
+model User {
+  id                 String     @id @default(cuid())
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  phoneNumber        String?    @unique
+  googleId           String?    @unique
+  email              String?    @unique
+  deviceHash         String? // For device-based merging
+  username           String     @unique
+  usernameReservedAt DateTime?
+  avatarType         AvatarType @default(DEFAULT)
+  profilePictureUrl  String?
+
+  coins              Int @default(0)
+  lifetimeCoins      Int @default(0)
+  lifetimeCoinPoints Int @default(0)
+
+  level          Int     @default(1)
+  theme          Theme   @default(SYSTEM)
+  soundEnabled   Boolean @default(true)
+  hapticsEnabled Boolean @default(true)
+  language       String  @default("en")
+
+  referralCode     String? @unique
+  referredById     String?
+  referredBy       User?   @relation("Referrals", fields: [referredById], references: [id])
+  referrals        User[]  @relation("Referrals")
+  referralRewarded Boolean @default(false)
+
+  role                Role @default(USER)
+  soloAttemptCount    Int  @default(0)
+  instantAttemptCount Int  @default(0)
+  dailyAttemptCount   Int  @default(0)
+
+  dailySessions      DailyTournamentSession[]
+  soloSessions       SoloSession[]
+  instantSessions    InstantSession[]
+  instantParticipant InstantParticipant[]
+
+  dailyLeaderBoards  DailyLeaderboard[]
+  instantLeaderboard InstantLeaderboard[]
+
+  currentLoginStreak  Int       @default(0)
+  longestLoginStreak  Int       @default(0)
+  lastLoginRewardDate DateTime?
+  totalLoginDays      Int       @default(0)
+
+  rewardClaim       RewardClaim[]
+  referralsGiven    Referral[]    @relation("Referrer")
+  referralsReceived Referral[]    @relation("Referee")
+
+  coinLedger           CoinLedger[]
+  dailyUserLeaderboard DailyUserLeaderboard[]
+
+  @@index([username])
+  @@index([phoneNumber])
+  @@index([googleId])
+  @@index([referralCode])
+}
+
+model DailyTournament {
+  id             String           @id @default(cuid())
+  date           DateTime         @unique @db.Date
+  createdAt      DateTime         @default(now())
+  status         TournamentStatus @default(OPEN)
+  configVersion  String?
+  minuteSnapshot MinuteSnapshot[]
+  final          Json             @default("[]")
+
+  sessions DailyTournamentSession[]
+
+  @@index([date])
+  @@index([status])
+}
+
+model DailyTournamentSession {
+  id                String               @id @default(cuid())
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  userId            String
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tournamentId      String
+  tournament        DailyTournament      @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  sessionSeed       String // For reproducible question generation
+  startedAt         DateTime             @default(now())
+  endedAt           DateTime?
+  status            UserTournamentStatus @default(NOT_OPENED)
+  currentScore      Int                  @default(0)
+  finalScore        Int?
+  minute1Score      Int?
+  minute2Score      Int?
+  minute3Score      Int?
+  minute4Score      Int?
+  isFreeAttempt     Boolean              @default(true)
+  isRewardedAttempt Boolean              @default(false)
+  currentLevel      Int                  @default(1)
+  questionsAnswered Int                  @default(0)
+  correctAnswers    Int                  @default(0)
+  endsAt            DateTime
+
+  questions QuestionAttempt[]
+
+  @@index([userId, tournamentId])
+  @@index([userId])
+  @@index([tournamentId])
+  @@map("DailyTournamentSession")
+}
+
+model MinuteSnapshot {
+  id           String          @id @default(cuid())
+  tournamentId String
+  tournament   DailyTournament @relation(fields: [tournamentId], references: [id])
+  minuteNumber Int
+  snapshot     Json
+
+  createdAt DateTime @default(now())
+
+  @@index([tournamentId, minuteNumber])
+}
+
+model SoloSession {
+  id                String               @id @default(cuid())
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  userId            String
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date              DateTime             @db.Date
+  sessionSeed       String
+  startedAt         DateTime             @default(now())
+  endedAt           DateTime?
+  status            UserTournamentStatus @default(NOT_OPENED)
+  currentRound      Int                  @default(1)
+  bankedPoints      Float                @default(0)
+  finalScore        Float?
+  coinPointsEarned  Int                  @default(0)
+  isFreeAttempt     Boolean              @default(true)
+  currentLevel      Int                  @default(1)
+  questionsAnswered Int                  @default(0)
+  correctAnswers    Int                  @default(0)
+  madeMistake       Boolean              @default(false)
+  quitEarly         Boolean              @default(false)
+
+  questions QuestionAttempt[]
+
+  @@index([userId, date])
+  @@index([userId])
+}
+
+model QuestionAttempt {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  questionIndex Int      @default(autoincrement())
+  level         Int
+  expression    String // e.g., "123 + 456"
+  result        String // Computed result as string
+  side          String // "front" or "right"
+  kthDigit      Int // Which digit to ask about
+  correctDigit  Int // The correct answer (0-9) 
+
+  dailySessionId   String?
+  dailySession     DailyTournamentSession? @relation(fields: [dailySessionId], references: [id], onDelete: Cascade)
+  soloSessionId    String?
+  soloSession      SoloSession?            @relation(fields: [soloSessionId], references: [id], onDelete: Cascade)
+  instantSessionId String?
+  instantSession   InstantSession?         @relation(fields: [instantSessionId], references: [id], onDelete: Cascade)
+
+  @@index([dailySessionId])
+  @@index([soloSessionId])
+  @@index([instantSessionId])
+}
+
+model InstantTournament {
+  id String @id @default(cuid())
+
+  status       TournamentStatus @default(OPEN)
+  maxPlayers   Int              @default(100)
+  playersCount Int              @default(0)
+
+  sessions InstantSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime
+
+  instantParticipant InstantParticipant[]
+
+  @@index([status, id])
+}
+
+model InstantSession {
+  id     String                         @id @default(cuid())
+  userId String
+  user   User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status InstantTournamentSessionStatus @default(ACTIVE)
+
+  tournamentId String
+  tournament   InstantTournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  questions  QuestionAttempt[]
+  score      Int               @default(0)
+  finalScore Int?
+  bestScore  Int               @default(0)
+
+  startedAt   DateTime  @default(now())
+  endsAt      DateTime?
+  submittedAt DateTime?
+
+  @@index([id])
+}
+
+model InstantParticipant {
+  tournamentId String
+  tournament   InstantTournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  joinedAt  DateTime @default(now())
+  joinOrder Int
+
+  sessionStarted Boolean @default(false)
+
+  finalScore  Int?
+  submittedAt DateTime?
+  finalRank   Int?
+
+  @@id([tournamentId, userId])
+  @@unique([tournamentId, userId])
+  @@index([userId, joinedAt])
+}
+
+model DailyLeaderboard {
+  id         String   @id @default(cuid())
+  date       DateTime
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bestScore  Int      @default(0)
+  rank       Int      @default(0)
+  coinPoints Int      @default(0)
+  updatedAt  DateTime @updatedAt
+
+  @@unique([date, userId])
+  @@index([date, bestScore])
+}
+
+model InstantLeaderboard {
+  id           String   @id @default(cuid())
+  tournamentId String
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bestScore    Int      @default(0)
+  rank         Int      @default(0)
+  coinPoints   Decimal  @db.Decimal(4, 2)
+  submittedAt  DateTime
+  updatedAt    DateTime @updatedAt
+  date         DateTime @default(now())
+
+  @@unique([tournamentId, userId])
+  @@index([tournamentId, bestScore])
+}
+
+model DailyUserLeaderboard {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date   DateTime
+
+  dailyCoinPoints   Int     @default(0)
+  instantCoinPoints Decimal @default(0) // Sum of best 10
+
+  totalCoinPoints Decimal @default(0)
+  rank            Int     @default(0)
+
+  isEligible   Boolean @default(false) // >= 5 coin points
+  coinsAwarded Float   @default(0) // Set next day
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([date, rank])
+  @@index([date, isEligible, rank])
+}
+
+model SoloLeaderboard {
+  id         String   @id @default(cuid())
+  date       DateTime @db.Date
+  userId     String
+  score      Float
+  rank       Int
+  percentile Float
+  coinPoints Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+enum ClaimStatus {
+  PENDING
+  FULFILLED
+  REJECTED
+}
+
+model RewardClaim {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  coinsLocked Int // Amount locked when claim requested (should be >= 5000)
+  status      ClaimStatus @default(PENDING)
+
+  voucherCode String?
+  adminNotes  String?   @db.Text
+  fulfilledBy String?
+  fulfilledAt DateTime?
+
+  rejectionReason String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+}
+
+enum ReferralStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+}
+
+model Referral {
+  id String @id @default(cuid())
+
+  referrerId String
+  referrer   User   @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+
+  refereeId String? // Null until referee signs up
+  referee   User?   @relation("Referee", fields: [refereeId], references: [id], onDelete: Cascade)
+
+  referralCode String         @unique
+  status       ReferralStatus @default(PENDING)
+
+  referrerCoins Int       @default(0) // Coins granted to referrer (from config)
+  refereeCoins  Int       @default(0) // Coins granted to referee (from config)
+  rewardedAt    DateTime? // When both parties received rewards
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([referrerId, status])
+  @@index([refereeId, status])
+  @@index([referralCode])
+}
+
+enum CoinLedgerSource {
+  DAILY_PERFORMANCE
+  REFERRAL
+  REWARD_LOCK
+  REWARD_UNLOCK
+  REDEMPTION
+  DAILY_LOGIN
+}
+
+model CoinLedger {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  date  DateTime
+  delta Int
+
+  source      CoinLedgerSource
+  referenceId String
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, source, referenceId])
+  @@index([userId, date])
+}
+
+model GameConfig {
+  id                   String   @id @default(uuid())
+  version              String
+  daily_tournament     Json
+  instant_tournament   Json
+  single_player        Json
+  leveling             Json
+  base_points_by_level Json
+  scoring              Json
+  points_distribution  Json
+  caps                 Json
+  ad_units             Json
+  lifelines            Json
+  top_attempts         Json
+  feature_flags        Json
+  safety               Json
+  referrals            Json
+  rewards              Json
+  cron                 Json
+  analytics            Json
+  leaderboard          Json
+  qa                   Json
+  updatedBy            String
+  notes                String?
+  createdAt            DateTime @default(now())
+  isActive             Boolean  @default(false)
+}

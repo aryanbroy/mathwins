@@ -15,39 +15,129 @@ type QuestionData = {
   correctDigit: number;
   level: number;
 };
+interface MyData {
+  required_games_for_referral_coins: number;
+}
+
+
 
 export const startSolo = async (req: Request, res: Response) => {
-    try {
-      // check attempt available for this user or not
-      // create question-set
-      // Remove answer (correctDigit)
-      // send Qs-set to Frontend
-      // 
-      // console.log("- - ",req.userData);
-      
-      const { userData } = req;
-      const userId = userData.id; 
-      const totalQuestionsInRun = gameConfig.single_player.round_size;
-      const freeAttemptsAllowed = gameConfig.single_player.daily_free_attempts;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-  
-      const updatedUser = await prisma.user.update({
-        where: {
-          id: userId,
-        },
-        data: {
-          soloAttemptCount: {
+  try {
+    // check attempt available for this user or not
+    // create question-set
+    // Remove answer (correctDigit)
+    // send Qs-set to Frontend
+    // 
+    // console.log("- - ",req.userData);
+    
+    const { userData } = req;
+    const userId = userData.id; 
+    const totalQuestionsInRun = gameConfig.single_player.round_size;
+    const freeAttemptsAllowed = gameConfig.single_player.daily_free_attempts;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const updatedUser = await prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        soloAttemptCount: {
             increment: 1
           },
         },
       });
-      if (updatedUser.soloAttemptCount > freeAttemptsAllowed) {
-        throw new ApiError({
-            statusCode: 501,
-            message: 'No Free Attempt Available for Today',
+      const config = await prisma.gameConfig.findFirst({
+        where: { isActive: true },
+        orderBy: { createdAt: "desc" },
+      });
+      if (!config) {
+        throw new ApiError({ statusCode: 500, message: 'Active game config not found' });
+      }
+      // updatedUser.soloAttemptCount + dailyAttemptCount + instantAttemptCount == gameconfig From DB threshold
+      // give coins to both updatedUser.id and updatedUser.referredById 
+      const { required_games_for_referral_coins } = (config.referrals as any);
+      const totalGames : number = updatedUser.soloAttemptCount + updatedUser.dailyAttemptCount + updatedUser.instantAttemptCount;
+      if (totalGames === required_games_for_referral_coins && updatedUser.referredById){
+        const referrerIdByUser = updatedUser.referredById;
+        if(!referrerIdByUser){
+          await prisma.user.update({
+            where: {
+              id: userId,
+            },
+            data: {
+              soloAttemptCount: {
+                decrement: 1
+              },
+            },
+          });
+          throw new ApiError({ statusCode: 500, message: 'No referrerId Found'});
+        }
+        const referral = await prisma.referral.findFirst({
+          where: {
+            referrerId: referrerIdByUser as string,
+            status: "PENDING",
+          },
+        });
+        if (!referral) {
+          await prisma.user.update({
+            where: {
+              id: userId,
+            },
+            data: {
+              soloAttemptCount: {
+                decrement: 1
+              },
+            },
+          });
+          throw new ApiError({ statusCode: 500, message: 'No referral or already rewarded'});
+        }
+        const {referrerId,id: referralId,} = referral;
+        const referrerCoins = (config.referrals as any).referrer_coins as number;
+        const refereeCoins = (config.referrals as any).referee_coins as number;
+
+        await prisma.$transaction(async (tx) => {
+          // Re-check inside transaction (race-condition safety)
+          const lockedReferral = await tx.referral.findUnique({
+            where: { id: referralId },
+          });
+
+          if (!lockedReferral || lockedReferral.status !== "PENDING") {
+            return;
+          }
+
+          // Credit referrer
+          await tx.user.update({
+            where: { id: referrerId },
+            data: {
+              coins: { increment: referrerCoins },
+              lifetimeCoins: { increment: referrerCoins },
+            },
+          });
+
+          // Credit referee
+          if (refereeCoins > 0) {
+            await tx.user.update({
+              where: { id: userId },
+              data: {
+                coins: { increment: refereeCoins },
+                lifetimeCoins: { increment: refereeCoins },
+                referralRewarded: true,
+              },
+            });
+          }
+
+          // Mark referral completed
+          await tx.referral.update({
+            where: { id: referralId },
+            data: {
+              status: "COMPLETED",
+              rewardedAt: new Date(),
+            },
+          });
         });
       }
+
       let question: QuestionData;
       question = await generateQuestion(1);
       console.log("qs : ",question);

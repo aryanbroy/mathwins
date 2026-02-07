@@ -27,7 +27,6 @@ export const verifyUser = async (
 
     // console.log('middleWare : ', token);
     const JWT_SECRET = process.env.JWT_SECRET as string;
-    // const verifiedUser = jwt.verify('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbWpsdWN5aW4wMDAzZWQweWVnd2pleWVkIiwidXNlcm5hbWUiOiJTd2F5YW5zaHUiLCJlbWFpbCI6ImFyZ3Vzc3RvbnlAZ21haWwuY29tIiwiaWF0IjoxNzY2NjkxMjU4LCJleHAiOjE3NjcyOTYwNTh9.nlvnrSWNj6qjORKqPa8rq_7B8fP8TS3yqA31Ik-DsIo', JWT_SECRET);
     const verifiedUser = jwt.verify(token, JWT_SECRET) as UserPayload;
     console.log(verifiedUser);
 

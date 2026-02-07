@@ -18,11 +18,7 @@ router.post('/create', isAdmin, createConfig);
 
 router.post('/gameConfig', isAdmin, getActiveGameConfig);
 
-router.patch(
-  "/config",
-  isAdmin,
-  changeConfig
-);
+router.patch("/changeConfig",isAdmin,changeConfig);
 
 router.post('/rewards/claims', isAdmin, listAllClaims);
 router.post('/rewards/reject', isAdmin, rejectClaim);

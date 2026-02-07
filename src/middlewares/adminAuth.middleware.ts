@@ -1,31 +1,43 @@
 import { Request, Response, NextFunction } from "express";
 import { ADMIN_EMAILS } from "../config/admin";
 import prisma from "../prisma";
+import jwt, { JwtPayload } from 'jsonwebtoken';
+
+interface UserPayload extends JwtPayload {
+  userId: string;
+}
 
 export const isAdmin = async (
   req: any,
   res: Response,
   next: NextFunction
 ) => {
-  const incomingUserId = req.header('Authorization');
-  const userId = String(incomingUserId);
-  console.log("user :- ",userId);
-  const user = await prisma.user.findFirst({
-    where: {
-      id: userId,
-    },
-  });
+  const authHeader = req.header('Authorization');
+  console.log('auth - middle : ', authHeader);
+
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Missing Authorization header' });
+  }
+  //
+  const token = authHeader.startsWith('Bearer ')
+    ? authHeader.split(' ')[1]
+    : authHeader;
+
+  // console.log('middleWare : ', token);
+  const JWT_SECRET = process.env.JWT_SECRET as string;
+  const verifiedUser = jwt.verify(token, JWT_SECRET) as UserPayload;
+  console.log(verifiedUser);
   
-  if (!user?.email) {
+  if (!verifiedUser?.email) {
     return res.status(401).json({ ok: false, error: "Unauthorized" });
   }
 
-  if (!ADMIN_EMAILS.includes(user.email)) {
+  if (!ADMIN_EMAILS.includes(verifiedUser.email)) {
     return res.status(403).json({ ok: false, error: "Admin access required" });
   }
-  console.log(user?.email," authorized");
-  req.userId = user.id;
-  req.email = user.email;
+  console.log(verifiedUser?.email," authorized");
+  req.userId = verifiedUser.id;
+  req.email = verifiedUser.email;
   
   next();
 };
