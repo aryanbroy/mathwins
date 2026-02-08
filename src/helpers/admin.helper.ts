@@ -37,7 +37,7 @@ export type ClaimHistory = PendingHistory | FulfilledHistory | RejectedHistory;
 
 export const listAllClaimsHandler = async (
   status: ClaimStatus
-): Promise<ClaimHistory[]> => {
+) => {
   const claims = await prisma.rewardClaim.findMany({
     where: { status },
     select: {
@@ -54,39 +54,39 @@ export const listAllClaimsHandler = async (
       createdAt: 'asc',
     },
   });
+  console.log("all : ",claims);
+  
+  // const history: ClaimHistory[] = claims.map((claim) => {
+  //   const base: ClaimHistory = {
+  //     id: claim.id,
+  //     userId: claim.userId,
+  //     status: CLAIM_STATUS_MAP[claim.status] || claim.status,
+  //     coinsLocked: claim.coinsLocked,
+  //     createdAt: claim.createdAt,
+  //   };
 
-  const history: ClaimHistory[] = claims.map((claim) => {
-    const base: ClaimHistory = {
-      id: claim.id,
-      userId: claim.userId,
-      status: CLAIM_STATUS_MAP[claim.status] || claim.status,
-      coinsLocked: claim.coinsLocked,
-      createdAt: claim.createdAt,
-    };
+  //   switch (claim.status) {
+  //     case 'FULFILLED':
+  //       return { ...base, voucherCode: claim.voucherCode! };
+  //     case 'REJECTED':
+  //       return {
+  //         ...base,
+  //         rejectionReason: claim.rejectionReason!,
+  //       };
+  //     case 'PENDING':
+  //     default:
+  //       return base;
+  //   }
+  // });
 
-    switch (claim.status) {
-      case 'FULFILLED':
-        return { ...base, voucherCode: claim.voucherCode! };
-      case 'REJECTED':
-        return {
-          ...base,
-          rejectionReason: claim.rejectionReason!,
-        };
-      case 'PENDING':
-      default:
-        return base;
-    }
-  });
-
-  return history;
+  return claims;
 };
 
 export const rejectClaimHandler = async (
   tx: Prisma.TransactionClient,
   adminId: string,
   claimId: string,
-  reason?: string,
-  notes?: string
+  reason: string,
 ) => {
   const claim = await tx.rewardClaim.update({
     where: {
@@ -95,8 +95,8 @@ export const rejectClaimHandler = async (
     },
     data: {
       status: 'REJECTED',
-      rejectionReason: reason ? reason : null,
-      adminNotes: notes ? notes : null,
+      voucherCode: '',
+      rejectionReason: reason ? reason : 'note not provided',
       fulfilledBy: adminId,
       fulfilledAt: new Date(),
     },
@@ -174,7 +174,8 @@ export const fulfillClaimHandler = async (
       fulfilledAt: new Date(),
     },
   });
-
+  console.log("claim : ",claim);
+  
   if (!claim) {
     throw new ApiError({
       statusCode: 404,
@@ -182,10 +183,10 @@ export const fulfillClaimHandler = async (
     });
   }
 
-  if (claim.status !== 'PENDING') {
+  if (claim.status !== 'FULFILLED') {
     throw new ApiError({
       statusCode: 400,
-      message: 'requested claim is not pending',
+      message: 'requested claim is not FULFILLED',
     });
   }
 

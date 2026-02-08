@@ -82,7 +82,6 @@ export const createDailyTournament = asyncHandler(
     //     message: 'Invalid user id',
     //   });
     // }
-
     const today = new Date();
     const tournamentStartDate = new Date(
       Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
@@ -295,6 +294,7 @@ export const submitQuestion = asyncHandler(
           acknowledged: true,
           currentScore,
           correctAnswer,
+
         },
         'Answer submitted'
       )

@@ -1,3 +1,4 @@
+import { getActiveGameConfig } from '../controller/admin/editconfig.controller';
 import { leaderboard } from '../controller/solo.controller';
 import { Prisma } from '../generated/prisma';
 import prisma from '../prisma';
@@ -32,8 +33,19 @@ export const postClaimRequestHandler = async (
     });
   }
 
-  // this should come from config: later
-  if (user.coins < 5000) {
+  const activeConfig = await prisma.gameConfig.findFirst({
+    where: { isActive: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!activeConfig) {
+    throw new ApiError({
+      statusCode: 404,
+      message: 'No active game config found',
+    });
+  }
+  const redeem_threshold_coins = (activeConfig?.rewards as any)?.redeem_threshold_coins;
+  if (user.coins < redeem_threshold_coins)  {
     throw new ApiError({
       statusCode: 400,
       message: 'Not eligible to claim reward',
@@ -45,20 +57,20 @@ export const postClaimRequestHandler = async (
       data: {
         userId,
         status: 'PENDING',
-        coinsLocked: 5000, // make coins locked variable later
+        coinsLocked: redeem_threshold_coins,
       },
     });
 
     tx.user.update({
       where: { id: userId },
-      data: { coins: { decrement: 5000 } }, // make this variable later
+      data: { coins: { decrement: redeem_threshold_coins} },
     });
 
     await tx.coinLedger.create({
       data: {
         userId,
         date: new Date(),
-        delta: -5000, // make this variable too: later
+        delta: -(redeem_threshold_coins),
         source: 'REWARD_LOCK',
         referenceId: claim.id,
       },
@@ -66,16 +78,10 @@ export const postClaimRequestHandler = async (
 
     return { claim };
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError) {
-      console.log('unique constraint error while claiming reward');
-      if (e.code === 'P2002') {
-        throw new ApiError({
-          statusCode: 409,
-          message: 'Claim already exists',
-        });
-      }
-    }
-    throw e;
+    throw new ApiError({
+      statusCode: 409,
+      message: 'Claim already exists',
+    });
   }
 };
 
