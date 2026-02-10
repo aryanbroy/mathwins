@@ -109,13 +109,6 @@ export const rejectClaimHandler = async (
     });
   }
 
-  if (claim.status !== 'PENDING') {
-    throw new ApiError({
-      statusCode: 400,
-      message: 'requested claim is not pending',
-    });
-  }
-
   const claimRequestUserId = claim.userId;
 
   try {
@@ -160,6 +153,14 @@ export const fulfillClaimHandler = async (
   reason?: string,
   notes?: string
 ) => {
+  console.log("claimId : ",claimId," adminId : ",adminId," voucher :", voucherCode);
+  if (!claimId && !adminId && !voucherCode) {
+    throw new ApiError({
+      statusCode: 404,
+      message: 'claimId, adminId, voucherCode is required',
+    });
+  }
+  
   const claim = await tx.rewardClaim.update({
     where: {
       id: claimId,
@@ -174,19 +175,12 @@ export const fulfillClaimHandler = async (
       fulfilledAt: new Date(),
     },
   });
-  console.log("claim : ",claim);
+  // console.log("claim : ",claim);
   
   if (!claim) {
     throw new ApiError({
       statusCode: 404,
       message: 'invalid claim id provided',
-    });
-  }
-
-  if (claim.status !== 'FULFILLED') {
-    throw new ApiError({
-      statusCode: 400,
-      message: 'requested claim is not FULFILLED',
     });
   }
 

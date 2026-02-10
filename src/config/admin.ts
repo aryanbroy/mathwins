@@ -1,4 +1,8 @@
-export const ADMIN_EMAILS = ['admin1@example.com', 'aryanbroy003@gmail.com', 'swayanshusahoo734@gmail.com'];
-
-// specify a single admin email and password. admin pannel is only accesable through that email
-
+export const ADMIN_EMAILS = [
+    'aryanbroy003@gmail.com', 
+    'swayanshusahoo734@gmail.com',
+    'pratikdehury@gmail.com',
+    'sahoosoumik@gmail.com',
+    'abhilashghadei@gmail.com',
+    'vhubanbam18@gmail.com'
+];

@@ -33,7 +33,7 @@ export const postClaimRequestHandler = async (
     });
   }
 
-  const activeConfig = await prisma.gameConfig.findFirst({
+  const activeConfig = await tx.gameConfig.findFirst({
     where: { isActive: true },
     orderBy: { createdAt: "desc" },
   });
@@ -61,11 +61,12 @@ export const postClaimRequestHandler = async (
       },
     });
 
-    tx.user.update({
+    const newUser = await tx.user.update({
       where: { id: userId },
-      data: { coins: { decrement: redeem_threshold_coins} },
+      data: { coins: { decrement: claim.coinsLocked } },
     });
-
+    // console.log("updated User after decrement : ",newUser);
+    
     await tx.coinLedger.create({
       data: {
         userId,
@@ -124,6 +125,7 @@ export const listRewardClaimsHandler = async (
       rejectionReason: true,
       adminNotes: true,
       createdAt: true,
+      updatedAt: true,
       id: true,
     },
     orderBy: {
@@ -138,6 +140,7 @@ export const listRewardClaimsHandler = async (
         status: CLAIM_STATUS_MAP[claim.status],
         coinsLocked: claim.coinsLocked,
         createdAt: claim.createdAt,
+        updatedAt: claim.updatedAt
       };
     } else if (claim.status === 'FULFILLED') {
       return {
@@ -147,6 +150,7 @@ export const listRewardClaimsHandler = async (
         createdAt: claim.createdAt,
         voucherCode: claim.voucherCode!,
         adminNotes: claim.adminNotes,
+        updatedAt: claim.updatedAt
       };
     } else if (claim.status === 'REJECTED') {
       return {
@@ -156,6 +160,7 @@ export const listRewardClaimsHandler = async (
         createdAt: claim.createdAt,
         rejectionReason: claim.rejectionReason!,
         adminNotes: claim.adminNotes,
+        updatedAt: claim.updatedAt
       };
     }
 
@@ -164,6 +169,7 @@ export const listRewardClaimsHandler = async (
       status: CLAIM_STATUS_MAP[claim.status] || claim.status,
       coinsLocked: claim.coinsLocked,
       createdAt: claim.createdAt,
+      updatedAt: claim.updatedAt
     };
   });
 
