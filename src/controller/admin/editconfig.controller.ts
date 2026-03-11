@@ -74,9 +74,26 @@ export const getActiveGameConfig = async (req: Request, res: Response) => {
         error: "No active game config found",
       });
     }
+    
+    // check daily Active or not
+    const now = new Date();
+    const today = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    );
 
+    const activeTournament = await prisma.dailyTournament.findFirst({
+      where: {
+        date: today,
+        status: "OPEN",
+      },
+    });
+    const isDailyActive = activeTournament ? true : false;
+    
     return res.status(200).json({
       ok: true,
+      isDailyActive: isDailyActive,
       config: {
         id: activeConfig.id,
         version: activeConfig.version,

@@ -2,12 +2,133 @@ import { Prisma } from '../generated/prisma';
 import prisma from '../prisma';
 import { ApiError } from '../utils/api/ApiError';
 
-export const assigndailyCoinPoints = async (tournamentStartDate: Date) => {
-  // assign ranks
-  await prisma.$executeRaw`
-    WITH ranked AS (
+// export const assigndailyCoinPoints = async (tournamentStartDate: Date) => {
+//   // assign ranks
+//   await prisma.$executeRaw`
+//     WITH ranked AS (
+//         SELECT id,
+//               ROW_NUMBER() OVER (ORDER BY "bestScore" DESC) AS rn
+//         FROM "DailyLeaderboard"
+//         WHERE "date" = ${tournamentStartDate}
+//       )
+//       UPDATE "DailyLeaderboard" d
+//       SET "rank" = r.rn
+//       FROM ranked r
+//       WHERE d.id = r.id;
+//   `;
+
+//   // initial coin points assign
+//   await prisma.$executeRaw`
+//     WITH ranked AS (
+//       SELECT 
+//         id,
+//         PERCENT_RANK() OVER (ORDER BY "bestScore" DESC) AS pct
+//       FROM "DailyLeaderboard"
+//       WHERE "date" = ${tournamentStartDate}
+//     )
+//     UPDATE "DailyLeaderboard" d
+//     SET "coinPoints" =
+//       CASE
+//         WHEN r.pct <= 0.01 THEN 30
+//         WHEN r.pct <= 0.02 THEN 20
+//         WHEN r.pct <= 0.03 THEN 15
+//         WHEN r.pct <= 0.10 THEN 10
+//         WHEN r.pct <= 0.20 THEN 9
+//         WHEN r.pct <= 0.50 THEN 9
+//         WHEN r.pct <= 0.80 THEN 8
+//         ELSE 0
+//       END
+//     FROM ranked r
+//     WHERE d.id = r.id;
+//   `;
+
+//   // recalculate for users >= 5 coin points
+//   await prisma.$executeRaw`
+//     WITH eligible AS (
+//       SELECT id, "bestScore"
+//       FROM "DailyLeaderboard"
+//       WHERE "date" = ${tournamentStartDate} AND "coinPoints" >= 5
+//     ),
+//     ranked AS (
+//       SELECT 
+//         id,
+//         PERCENT_RANK() OVER (ORDER BY "bestScore" DESC) AS pct
+//       FROM eligible
+//     )
+//     UPDATE "DailyLeaderboard" d
+//     SET "coinPoints" =
+//       CASE
+//         WHEN r.pct <= 0.01 THEN 30
+//         WHEN r.pct <= 0.02 THEN 20
+//         WHEN r.pct <= 0.03 THEN 15
+//         WHEN r.pct <= 0.10 THEN 10
+//         WHEN r.pct <= 0.20 THEN 9
+//         WHEN r.pct <= 0.50 THEN 9
+//         WHEN r.pct <= 0.80 THEN 8
+//         ELSE 0
+//       END
+//     FROM ranked r
+//     WHERE d.id = r.id;
+//   `;
+
+//   // ensure users with < 5 coin points don't receive any coin points
+//   await prisma.$executeRaw`
+//     UPDATE "DailyLeaderboard"
+//     SET "coinPoints" = 0
+//     WHERE "date" = ${tournamentStartDate} AND "coinPoints" < 5;
+//   `;
+// };
+
+type RangeDistribution = {
+  range: string;
+  points: number;
+};
+
+export const assignDailyCoinPoints = async (
+  tournamentStartDate: Date
+) => {
+  return prisma.$transaction(async (tx) => {
+    // 1️⃣ Fetch active config
+    const config = await tx.gameConfig.findFirst({
+      where: { isActive: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!config) {
+      throw new ApiError({
+        statusCode: 500,
+        message: "Active game config not found",
+      });
+    }
+
+    const pointsConfig = config.points_distribution;
+
+    if (!(pointsConfig as any)?.daily_points_distribution) {
+      throw new ApiError({
+        statusCode: 500,
+        message: "Daily points distribution missing in config",
+      });
+    }
+
+    const {
+      min_participants_for_percentiles,
+      daily_points_distribution,
+    } = pointsConfig as any;
+
+    // 2️⃣ Count participants
+    const totalParticipants = await tx.dailyLeaderboard.count({
+      where: { date: tournamentStartDate },
+    });
+
+    if (totalParticipants === 0) {
+      return { success: true };
+    }
+
+    // 3️⃣ Assign rank first
+    await tx.$executeRaw`
+      WITH ranked AS (
         SELECT id,
-              ROW_NUMBER() OVER (ORDER BY "bestScore" DESC) AS rn
+               ROW_NUMBER() OVER (ORDER BY "bestScore" DESC) AS rn
         FROM "DailyLeaderboard"
         WHERE "date" = ${tournamentStartDate}
       )
@@ -15,134 +136,310 @@ export const assigndailyCoinPoints = async (tournamentStartDate: Date) => {
       SET "rank" = r.rn
       FROM ranked r
       WHERE d.id = r.id;
-  `;
+    `;
 
-  // initial coin points assign
-  await prisma.$executeRaw`
-    WITH ranked AS (
-      SELECT 
-        id,
-        PERCENT_RANK() OVER (ORDER BY "bestScore" DESC) AS pct
-      FROM "DailyLeaderboard"
-      WHERE "date" = ${tournamentStartDate}
-    )
-    UPDATE "DailyLeaderboard" d
-    SET "coinPoints" =
-      CASE
-        WHEN r.pct <= 0.01 THEN 30
-        WHEN r.pct <= 0.02 THEN 20
-        WHEN r.pct <= 0.03 THEN 15
-        WHEN r.pct <= 0.10 THEN 10
-        WHEN r.pct <= 0.20 THEN 9
-        WHEN r.pct <= 0.50 THEN 9
-        WHEN r.pct <= 0.80 THEN 8
-        ELSE 0
-      END
-    FROM ranked r
-    WHERE d.id = r.id;
-  `;
+    // 4️⃣ Decide percentile or rank mode
+    const usePercentile =
+      totalParticipants >= min_participants_for_percentiles;
 
-  // recalculate for users >= 5 coin points
-  await prisma.$executeRaw`
-    WITH eligible AS (
-      SELECT id, "bestScore"
-      FROM "DailyLeaderboard"
-      WHERE "date" = ${tournamentStartDate} AND "coinPoints" >= 5
-    ),
-    ranked AS (
-      SELECT 
-        id,
-        PERCENT_RANK() OVER (ORDER BY "bestScore" DESC) AS pct
-      FROM eligible
-    )
-    UPDATE "DailyLeaderboard" d
-    SET "coinPoints" =
-      CASE
-        WHEN r.pct <= 0.01 THEN 30
-        WHEN r.pct <= 0.02 THEN 20
-        WHEN r.pct <= 0.03 THEN 15
-        WHEN r.pct <= 0.10 THEN 10
-        WHEN r.pct <= 0.20 THEN 9
-        WHEN r.pct <= 0.50 THEN 9
-        WHEN r.pct <= 0.80 THEN 8
-        ELSE 0
-      END
-    FROM ranked r
-    WHERE d.id = r.id;
-  `;
+    let caseStatements = "";
 
-  // ensure users with < 5 coin points don't receive any coin points
-  await prisma.$executeRaw`
-    UPDATE "DailyLeaderboard"
-    SET "coinPoints" = 0
-    WHERE "date" = ${tournamentStartDate} AND "coinPoints" < 5;
-  `;
+    if (usePercentile) {
+      // ---------- PERCENTILE MODE ----------
+      caseStatements = daily_points_distribution
+        .map((item: RangeDistribution) => {
+          const [min, max] = item.range.split("-").map(Number);
+
+          return `
+            WHEN r.pct > ${min / 100} 
+             AND r.pct <= ${max / 100}
+            THEN ${item.points}
+          `;
+        })
+        .join("\n");
+
+      await tx.$executeRawUnsafe(`
+        WITH ranked AS (
+          SELECT 
+            id,
+            PERCENT_RANK() OVER (ORDER BY "bestScore" DESC) AS pct
+          FROM "DailyLeaderboard"
+          WHERE "date" = '${tournamentStartDate.toISOString()}'
+        )
+        UPDATE "DailyLeaderboard" d
+        SET "coinPoints" = 
+          CASE
+            ${caseStatements}
+            ELSE 0
+          END
+        FROM ranked r
+        WHERE d.id = r.id;
+      `);
+    } else {
+      // ---------- RANK MODE ----------
+      caseStatements = daily_points_distribution
+        .map((item: RangeDistribution) => {
+          if (item.range.includes("-")) {
+            const [min, max] = item.range.split("-").map(Number);
+            return `
+              WHEN d.rank BETWEEN ${min} AND ${max}
+              THEN ${item.points}
+            `;
+          } else {
+            const rank = Number(item.range);
+            return `
+              WHEN d.rank = ${rank}
+              THEN ${item.points}
+            `;
+          }
+        })
+        .join("\n");
+
+      await tx.$executeRawUnsafe(`
+        UPDATE "DailyLeaderboard" d
+        SET "coinPoints" =
+          CASE
+            ${caseStatements}
+            ELSE 0
+          END
+        WHERE "date" = '${tournamentStartDate.toISOString()}';
+      `);
+    }
+
+    return { success: true };
+  });
 };
 
 // this will run after each instant tournament ends (i.e, after 20 mins)
-export const assignInstantCoinPointsHandler = async (tournamentId: string) => {
-  const tournament = await prisma.instantTournament.findUnique({
-    where: {
-      id: tournamentId,
-      // expiresAt: {
-      //   lt: now,
-      // },
-    },
-    select: { status: true },
-  });
-  if (!tournament || tournament.status !== 'CLOSED') {
-    throw new ApiError({ statusCode: 400, message: 'invalid instant room' });
-  }
+// export const assignInstantCoinPointsHandler = async (tournamentId: string) => {
+//   const tournament = await prisma.instantTournament.findUnique({
+//     where: {
+//       id: tournamentId,
+//       // expiresAt: {
+//       //   lt: now,
+//       // },
+//     },
+//     select: { status: true },
+//   });
+//   if (!tournament || tournament.status !== 'CLOSED') {
+//     throw new ApiError({ statusCode: 400, message: 'invalid instant room' });
+//   }
 
-  const results = await prisma.$queryRaw<
-    { userId: string; rank: number; coinPoints: string }[]
-  >`
-  WITH room AS (
-    SELECT 
-      id,
-      "userId",
-      "bestScore",
-      "submittedAt",
-      ROW_NUMBER() OVER (
-        ORDER BY "bestScore" DESC, "submittedAt" ASC
-      ) AS rn,
-      COUNT(*) OVER() AS total
-    FROM "InstantLeaderboard"
-    WHERE "tournamentId" = ${tournamentId}
-  ),
-  ranked AS (
-    SELECT 
-      id,
-      "userId",
-      rn,
-      total,
-      CASE
-        WHEN total >= 50 AND (rn::float / total) <= 0.01 THEN 5.0
-        WHEN total >= 50 AND (rn::float / total) <= 0.03 THEN 3.0
-        WHEN total >= 50 AND (rn::float / total) <= 0.05 THEN 2.0
-        WHEN total >= 50 AND (rn::float / total) <= 0.10 THEN 1.5
-        WHEN total >= 50 AND (rn::float / total) <= 0.45 THEN 1.0
-        WHEN total >= 50 THEN 0.0
+//   const results = await prisma.$queryRaw<
+//     { userId: string; rank: number; coinPoints: string }[]
+//   >`
+//   WITH room AS (
+//     SELECT 
+//       id,
+//       "userId",
+//       "bestScore",
+//       "submittedAt",
+//       ROW_NUMBER() OVER (
+//         ORDER BY "bestScore" DESC, "submittedAt" ASC
+//       ) AS rn,
+//       COUNT(*) OVER() AS total
+//     FROM "InstantLeaderboard"
+//     WHERE "tournamentId" = ${tournamentId}
+//   ),
+//   ranked AS (
+//     SELECT 
+//       id,
+//       "userId",
+//       rn,
+//       total,
+//       CASE
+//         WHEN total >= 50 AND (rn::float / total) <= 0.01 THEN 5.0
+//         WHEN total >= 50 AND (rn::float / total) <= 0.03 THEN 3.0
+//         WHEN total >= 50 AND (rn::float / total) <= 0.05 THEN 2.0
+//         WHEN total >= 50 AND (rn::float / total) <= 0.10 THEN 1.5
+//         WHEN total >= 50 AND (rn::float / total) <= 0.45 THEN 1.0
+//         WHEN total >= 50 THEN 0.0
         
-        WHEN total < 50 AND rn = 1 THEN 5.0
-        WHEN total < 50 AND rn = 2 THEN 3.0
-        WHEN total < 50 AND rn = 3 THEN 2.0
-        WHEN total < 50 AND rn BETWEEN 4 AND 10 THEN 1.0
-        ELSE 0.0
-      END AS cp
-    FROM room
-  )
-  UPDATE "InstantLeaderboard" d
-  SET 
-    "rank" = r.rn,
-    "coinPoints" = r.cp
-  FROM ranked r
-  WHERE d.id = r.id
-  RETURNING d."userId", d."rank", d."coinPoints";
-  `;
+//         WHEN total < 50 AND rn = 1 THEN 5.0
+//         WHEN total < 50 AND rn = 2 THEN 3.0
+//         WHEN total < 50 AND rn = 3 THEN 2.0
+//         WHEN total < 50 AND rn BETWEEN 4 AND 10 THEN 1.0
+//         ELSE 0.0
+//       END AS cp
+//     FROM room
+//   )
+//   UPDATE "InstantLeaderboard" d
+//   SET 
+//     "rank" = r.rn,
+//     "coinPoints" = r.cp
+//   FROM ranked r
+//   WHERE d.id = r.id
+//   RETURNING d."userId", d."rank", d."coinPoints";
+//   `;
 
-  console.table(results);
-  return results;
+//   console.table(results);
+//   return results;
+// };
+
+export const assignInstantCoinPointsHandler = async (
+  tournamentId: string
+) => {
+  return prisma.$transaction(async (tx) => {
+    // 1️⃣ Validate tournament
+    const tournament = await tx.instantTournament.findUnique({
+      where: { id: tournamentId },
+      select: { status: true },
+    });
+
+    if (!tournament || tournament.status !== "CLOSED") {
+      throw new ApiError({
+        statusCode: 400,
+        message: "invalid instant room",
+      });
+    }
+
+    // 2️⃣ Fetch active config
+    const config = await tx.gameConfig.findFirst({
+      where: { isActive: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!config) {
+      throw new ApiError({
+        statusCode: 500,
+        message: "Active game config not found",
+      });
+    }
+
+    const pointsConfig = config.points_distribution;
+
+    if (!(pointsConfig as any)?.instant_points_distribution) {
+      throw new ApiError({
+        statusCode: 500,
+        message: "Instant distribution missing in config",
+      });
+    }
+
+    const {
+      min_participants_for_percentiles,
+      instant_points_distribution,
+    } = pointsConfig as any;
+
+    // 3️⃣ Count participants
+    const totalParticipants = await tx.instantLeaderboard.count({
+      where: { tournamentId },
+    });
+
+    if (totalParticipants === 0) {
+      return [];
+    }
+
+    const usePercentile = totalParticipants >= min_participants_for_percentiles;
+
+    let caseStatements = "";
+
+    // ----------- Percentile Mode -----------
+    if (usePercentile) {
+      caseStatements = instant_points_distribution
+        .map((item: RangeDistribution) => {
+          if (!item.range.includes("-")) {
+            return null;
+          }
+
+          const [min, max] = item.range.split("-").map(Number);
+
+          return `
+            WHEN (r.rn::float / r.total) > ${min / 100}
+             AND (r.rn::float / r.total) <= ${max / 100}
+            THEN ${item.points}
+          `;
+        })
+        .filter(Boolean)
+        .join("\n");
+
+      return await tx.$queryRawUnsafe(`
+        WITH room AS (
+          SELECT 
+            id,
+            "userId",
+            "bestScore",
+            "submittedAt",
+            ROW_NUMBER() OVER (
+              ORDER BY "bestScore" DESC, "submittedAt" ASC
+            ) AS rn,
+            COUNT(*) OVER() AS total
+          FROM "InstantLeaderboard"
+          WHERE "tournamentId" = '${tournamentId}'
+        ),
+        ranked AS (
+          SELECT 
+            id,
+            "userId",
+            rn,
+            total,
+            CASE
+              ${caseStatements}
+              ELSE 0.0
+            END AS cp
+          FROM room
+        )
+        UPDATE "InstantLeaderboard" d
+        SET 
+          "rank" = r.rn,
+          "coinPoints" = r.cp
+        FROM ranked r
+        WHERE d.id = r.id
+        RETURNING d."userId", d."rank", d."coinPoints";
+      `);
+    }
+
+    // -------------- Rank Mode -------------
+    caseStatements = instant_points_distribution
+      .map((item: RangeDistribution) => {
+        if (item.range.includes("-")) {
+          const [min, max] = item.range.split("-").map(Number);
+          return `
+            WHEN r.rn BETWEEN ${min} AND ${max}
+            THEN ${item.points}
+          `;
+        } else {
+          const rank = Number(item.range);
+          return `
+            WHEN r.rn = ${rank}
+            THEN ${item.points}
+          `;
+        }
+      })
+      .join("\n");
+
+    return await tx.$queryRawUnsafe(`
+      WITH room AS (
+        SELECT 
+          id,
+          "userId",
+          "bestScore",
+          "submittedAt",
+          ROW_NUMBER() OVER (
+            ORDER BY "bestScore" DESC, "submittedAt" ASC
+          ) AS rn
+        FROM "InstantLeaderboard"
+        WHERE "tournamentId" = '${tournamentId}'
+      ),
+      ranked AS (
+        SELECT 
+          id,
+          "userId",
+          rn,
+          CASE
+            ${caseStatements}
+            ELSE 0.0
+          END AS cp
+        FROM room r
+      )
+      UPDATE "InstantLeaderboard" d
+      SET 
+        "rank" = r.rn,
+        "coinPoints" = r.cp
+      FROM ranked r
+      WHERE d.id = r.id
+      RETURNING d."userId", d."rank", d."coinPoints";
+    `);
+  });
 };
 
 export const aggregateCoinPointsHandler = async (
