@@ -20,8 +20,8 @@ export const postClaimRequest = asyncHandler(
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const { claim } = await postClaimRequestHandler(tx, userId);
-      return claim;
+      const { claim,newUser } = await postClaimRequestHandler(tx, userId);
+      return {claim,newUser};
     });
 
     res

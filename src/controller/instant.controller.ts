@@ -137,9 +137,11 @@ export const startSession = asyncHandler(
       const session = await startSessionHandler(tx, userId, roomId);
 
       const question = await generateQuestion(1);
-      const firstQuestion = await storeQuestion(tx, question, session.id);
+      const firstQuestion = await storeQuestion(tx, question, session.id, 1);
+      const { correctDigit, result, ...clientSafeQuestion } = firstQuestion;
+      const sanitizedQuestion = clientSafeQuestion;
 
-      return { session, firstQuestion };
+      return { session, sanitizedQuestion };
     });
 
     res
@@ -147,7 +149,7 @@ export const startSession = asyncHandler(
       .json(
         new ApiResponse(
           201,
-          { session: result.session, question: result.firstQuestion },
+          { session: result.session, question: result.sanitizedQuestion },
           'session started'
         )
       );
@@ -215,8 +217,11 @@ export const submitQuestion = asyncHandler(
       const newQuestion = await storeQuestion(
         tx,
         generatedQuestion,
-        session.id
+        session.id,
+        question?.questionIndex+1, // only if answer is 100% correct 
       );
+      const { correctDigit, result, ...clientSafeQuestion } = newQuestion;
+      const sanitizedQuestion = clientSafeQuestion;
 
       const updatedSession = await submitQuestionHandler(
         tx,
@@ -226,7 +231,7 @@ export const submitQuestion = asyncHandler(
         timeTakenMs
       );
 
-      return { updatedSession, question, newQuestion };
+      return { updatedSession, question, newQuestion:sanitizedQuestion };
     });
 
     res.status(200).json(

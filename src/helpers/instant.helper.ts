@@ -13,6 +13,7 @@ export type QuestionValidationType = {
   kthDigit: number;
   correctDigit: number;
   level: number;
+  questionIndex: number;
 };
 
 export const validExpiryInterval = (now: Date) => {
@@ -130,6 +131,7 @@ export const checkQuestionIsValid = async (
         kthDigit: true,
         correctDigit: true,
         level: true,
+        questionIndex: true,
       },
     });
     if (!validQuestion) {
@@ -299,11 +301,13 @@ export const tournamentIsValid = async (
 export const storeQuestion = async (
   tx: Prisma.TransactionClient,
   question: GeneratedQuestion,
-  sessionId: string
+  sessionId: string,
+  index: number
 ) => {
   const storedQuestion = await tx.questionAttempt.create({
     data: {
       level: 1,
+      questionIndex: index,
       expression: question.expression,
       result: question.result,
       side: question.side,

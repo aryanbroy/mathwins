@@ -183,7 +183,6 @@ export const startSolo = async (req: Request, res: Response) => {
       }
       const createdQuestion = newAttempt.questions[0];
       const { correctDigit, result, ...clientSafeQuestion } = createdQuestion;
-      // const sanitizedQuestion = {...clientSafeQuestion, questionId: createdQuestion.id};
       const sanitizedQuestion = clientSafeQuestion;
       
       return res.status(201).json(new ApiResponse(

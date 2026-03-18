@@ -45,6 +45,9 @@ export const postClaimRequestHandler = async (
     });
   }
   const redeem_threshold_coins = (activeConfig?.rewards as any)?.redeem_threshold_coins;
+  const redeem_coins = Math.floor(user.coins / 1000) * 1000;
+  console.log(user,"/n",redeem_threshold_coins);
+  
   if (user.coins < redeem_threshold_coins)  {
     throw new ApiError({
       statusCode: 400,
@@ -57,27 +60,27 @@ export const postClaimRequestHandler = async (
       data: {
         userId,
         status: 'PENDING',
-        coinsLocked: redeem_threshold_coins,
+        coinsLocked: redeem_coins,
       },
     });
 
     const newUser = await tx.user.update({
       where: { id: userId },
-      data: { coins: { decrement: claim.coinsLocked } },
+      data: { coins: { decrement: redeem_coins } },
     });
-    // console.log("updated User after decrement : ",newUser);
+    console.log("updated User after decrement : ",newUser);
     
     await tx.coinLedger.create({
       data: {
         userId,
         date: new Date(),
-        delta: -(redeem_threshold_coins),
+        delta: -(redeem_coins),
         source: 'REWARD_LOCK',
         referenceId: claim.id,
       },
     });
 
-    return { claim };
+    return { claim, newUser };
   } catch (e) {
     throw new ApiError({
       statusCode: 409,

@@ -76,19 +76,19 @@ export const getActiveGameConfig = async (req: Request, res: Response) => {
     }
     
     // check daily Active or not
-    const now = new Date();
-    const today = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
+    const today = new Date();
+    const tournamentStartDate = new Date(
+      Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
     );
 
     const activeTournament = await prisma.dailyTournament.findFirst({
       where: {
-        date: today,
+        date: tournamentStartDate,
         status: "OPEN",
       },
     });
+    console.log("activeTournament - editconfig.controller.ts : : : ", activeTournament);
+    
     const isDailyActive = activeTournament ? true : false;
     
     return res.status(200).json({
