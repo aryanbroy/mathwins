@@ -21,12 +21,13 @@ export const calculateSoloCoinPoint = () => {
 
 export const calculateInstantScore = (
   answer: number,
+  correctDigit: number,
   level: number,
   timeTakenMs: number
 ): number => {
-  console.log('Answer: ', answer);
-  const basePoints = calculateBasePoints(level, answer);
-  const totalScore = basePoints + (10000 - timeTakenMs) / 10000;
+  const diff = Math.abs(correctDigit - answer);
+  const score = 10 - diff;
+  const totalScore = score + (10000 - timeTakenMs) / 10000;
   console.log('Total score: ', totalScore);
 
   return totalScore;

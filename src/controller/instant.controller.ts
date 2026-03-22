@@ -138,6 +138,8 @@ export const startSession = asyncHandler(
 
       const question = await generateQuestion(1);
       const firstQuestion = await storeQuestion(tx, question, session.id, 1);
+      console.log("FIRST QUESTION :: ",firstQuestion);
+      
       const { correctDigit, result, ...clientSafeQuestion } = firstQuestion;
       const sanitizedQuestion = clientSafeQuestion;
 
@@ -213,16 +215,6 @@ export const submitQuestion = asyncHandler(
 
       const question = await checkQuestionIsValid(tx, questionId);
 
-      const generatedQuestion = await generateQuestion(1);
-      const newQuestion = await storeQuestion(
-        tx,
-        generatedQuestion,
-        session.id,
-        question?.questionIndex+1, // only if answer is 100% correct 
-      );
-      const { correctDigit, result, ...clientSafeQuestion } = newQuestion;
-      const sanitizedQuestion = clientSafeQuestion;
-
       const updatedSession = await submitQuestionHandler(
         tx,
         question,
@@ -230,6 +222,20 @@ export const submitQuestion = asyncHandler(
         answer,
         timeTakenMs
       );
+      const newLevel = question.correctDigit===answer ? question.level+1 : question.level;
+      const generatedQuestion = await generateQuestion(newLevel);
+      
+      const newQuestion = await storeQuestion(
+        tx,
+        generatedQuestion,
+        session.id,
+        question?.questionIndex+1,
+      );
+      console.log("NEW generatedQuestion :: ",generatedQuestion);
+      console.log("NEW QS :: ",newQuestion);
+      const { correctDigit, result, ...clientSafeQuestion } = newQuestion;
+      const sanitizedQuestion = clientSafeQuestion;
+
 
       return { updatedSession, question, newQuestion:sanitizedQuestion };
     });

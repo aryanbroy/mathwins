@@ -167,13 +167,13 @@ export const checkAnswer = (
 export const updateSessionScore = async (
   tx: Prisma.TransactionClient,
   sessionId: string,
-  incrementalScore: number
+  incrementalScore: number,
 ): Promise<InstantSession> => {
   const updatedSession = await tx.instantSession.update({
     data: {
       score: {
         increment: incrementalScore,
-      },
+      }
     },
     where: {
       id: sessionId,
@@ -306,7 +306,7 @@ export const storeQuestion = async (
 ) => {
   const storedQuestion = await tx.questionAttempt.create({
     data: {
-      level: 1,
+      level: question.level,
       questionIndex: index,
       expression: question.expression,
       result: question.result,

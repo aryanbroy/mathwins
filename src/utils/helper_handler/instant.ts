@@ -192,13 +192,14 @@ export const submitQuestionHandler = async (
   try {
     const incrementalScore = calculateInstantScore(
       answer,
+      question.correctDigit,
       question.level,
       timeTakenMs
     );
     const updatedSession = await updateSessionScore(
       tx,
       sessionId,
-      incrementalScore
+      incrementalScore,
     );
 
     return updatedSession;
