@@ -116,6 +116,7 @@ export const startSession = asyncHandler(
     if (!tournament) {
       throw new ApiError({ statusCode: 404, message: 'room not found' });
     }
+    console.log('ExpiresAt: ', tournament.expiresAt);
     if (tournament.expiresAt < now) {
       throw new ApiError({ statusCode: 403, message: 'room closed' });
     }
@@ -138,8 +139,8 @@ export const startSession = asyncHandler(
 
       const question = await generateQuestion(1);
       const firstQuestion = await storeQuestion(tx, question, session.id, 1);
-      console.log("FIRST QUESTION :: ",firstQuestion);
-      
+      console.log('FIRST QUESTION :: ', firstQuestion);
+
       const { correctDigit, result, ...clientSafeQuestion } = firstQuestion;
       const sanitizedQuestion = clientSafeQuestion;
 
@@ -222,22 +223,22 @@ export const submitQuestion = asyncHandler(
         answer,
         timeTakenMs
       );
-      const newLevel = question.correctDigit===answer ? question.level+1 : question.level;
+      const newLevel =
+        question.correctDigit === answer ? question.level + 1 : question.level;
       const generatedQuestion = await generateQuestion(newLevel);
-      
+
       const newQuestion = await storeQuestion(
         tx,
         generatedQuestion,
         session.id,
-        question?.questionIndex+1,
+        question?.questionIndex + 1
       );
-      console.log("NEW generatedQuestion :: ",generatedQuestion);
-      console.log("NEW QS :: ",newQuestion);
+      console.log('NEW generatedQuestion :: ', generatedQuestion);
+      console.log('NEW QS :: ', newQuestion);
       const { correctDigit, result, ...clientSafeQuestion } = newQuestion;
       const sanitizedQuestion = clientSafeQuestion;
 
-
-      return { updatedSession, question, newQuestion:sanitizedQuestion };
+      return { updatedSession, question, newQuestion: sanitizedQuestion };
     });
 
     res.status(200).json(

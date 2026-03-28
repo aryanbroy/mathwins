@@ -11920,12 +11920,16 @@ export namespace Prisma {
     score: number | null
     finalScore: number | null
     bestScore: number | null
+    currentLevel: number | null
+    questionsAnswered: number | null
   }
 
   export type InstantSessionSumAggregateOutputType = {
     score: number | null
     finalScore: number | null
     bestScore: number | null
+    currentLevel: number | null
+    questionsAnswered: number | null
   }
 
   export type InstantSessionMinAggregateOutputType = {
@@ -11936,6 +11940,8 @@ export namespace Prisma {
     score: number | null
     finalScore: number | null
     bestScore: number | null
+    currentLevel: number | null
+    questionsAnswered: number | null
     startedAt: Date | null
     endsAt: Date | null
     submittedAt: Date | null
@@ -11949,6 +11955,8 @@ export namespace Prisma {
     score: number | null
     finalScore: number | null
     bestScore: number | null
+    currentLevel: number | null
+    questionsAnswered: number | null
     startedAt: Date | null
     endsAt: Date | null
     submittedAt: Date | null
@@ -11962,6 +11970,8 @@ export namespace Prisma {
     score: number
     finalScore: number
     bestScore: number
+    currentLevel: number
+    questionsAnswered: number
     startedAt: number
     endsAt: number
     submittedAt: number
@@ -11973,12 +11983,16 @@ export namespace Prisma {
     score?: true
     finalScore?: true
     bestScore?: true
+    currentLevel?: true
+    questionsAnswered?: true
   }
 
   export type InstantSessionSumAggregateInputType = {
     score?: true
     finalScore?: true
     bestScore?: true
+    currentLevel?: true
+    questionsAnswered?: true
   }
 
   export type InstantSessionMinAggregateInputType = {
@@ -11989,6 +12003,8 @@ export namespace Prisma {
     score?: true
     finalScore?: true
     bestScore?: true
+    currentLevel?: true
+    questionsAnswered?: true
     startedAt?: true
     endsAt?: true
     submittedAt?: true
@@ -12002,6 +12018,8 @@ export namespace Prisma {
     score?: true
     finalScore?: true
     bestScore?: true
+    currentLevel?: true
+    questionsAnswered?: true
     startedAt?: true
     endsAt?: true
     submittedAt?: true
@@ -12015,6 +12033,8 @@ export namespace Prisma {
     score?: true
     finalScore?: true
     bestScore?: true
+    currentLevel?: true
+    questionsAnswered?: true
     startedAt?: true
     endsAt?: true
     submittedAt?: true
@@ -12115,6 +12135,8 @@ export namespace Prisma {
     score: number
     finalScore: number | null
     bestScore: number
+    currentLevel: number
+    questionsAnswered: number
     startedAt: Date
     endsAt: Date | null
     submittedAt: Date | null
@@ -12147,6 +12169,8 @@ export namespace Prisma {
     score?: boolean
     finalScore?: boolean
     bestScore?: boolean
+    currentLevel?: boolean
+    questionsAnswered?: boolean
     startedAt?: boolean
     endsAt?: boolean
     submittedAt?: boolean
@@ -12164,6 +12188,8 @@ export namespace Prisma {
     score?: boolean
     finalScore?: boolean
     bestScore?: boolean
+    currentLevel?: boolean
+    questionsAnswered?: boolean
     startedAt?: boolean
     endsAt?: boolean
     submittedAt?: boolean
@@ -12179,6 +12205,8 @@ export namespace Prisma {
     score?: boolean
     finalScore?: boolean
     bestScore?: boolean
+    currentLevel?: boolean
+    questionsAnswered?: boolean
     startedAt?: boolean
     endsAt?: boolean
     submittedAt?: boolean
@@ -12194,12 +12222,14 @@ export namespace Prisma {
     score?: boolean
     finalScore?: boolean
     bestScore?: boolean
+    currentLevel?: boolean
+    questionsAnswered?: boolean
     startedAt?: boolean
     endsAt?: boolean
     submittedAt?: boolean
   }
 
-  export type InstantSessionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "status" | "tournamentId" | "score" | "finalScore" | "bestScore" | "startedAt" | "endsAt" | "submittedAt", ExtArgs["result"]["instantSession"]>
+  export type InstantSessionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "status" | "tournamentId" | "score" | "finalScore" | "bestScore" | "currentLevel" | "questionsAnswered" | "startedAt" | "endsAt" | "submittedAt", ExtArgs["result"]["instantSession"]>
   export type InstantSessionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
     tournament?: boolean | InstantTournamentDefaultArgs<ExtArgs>
@@ -12230,6 +12260,8 @@ export namespace Prisma {
       score: number
       finalScore: number | null
       bestScore: number
+      currentLevel: number
+      questionsAnswered: number
       startedAt: Date
       endsAt: Date | null
       submittedAt: Date | null
@@ -12666,6 +12698,8 @@ export namespace Prisma {
     readonly score: FieldRef<"InstantSession", 'Int'>
     readonly finalScore: FieldRef<"InstantSession", 'Int'>
     readonly bestScore: FieldRef<"InstantSession", 'Int'>
+    readonly currentLevel: FieldRef<"InstantSession", 'Int'>
+    readonly questionsAnswered: FieldRef<"InstantSession", 'Int'>
     readonly startedAt: FieldRef<"InstantSession", 'DateTime'>
     readonly endsAt: FieldRef<"InstantSession", 'DateTime'>
     readonly submittedAt: FieldRef<"InstantSession", 'DateTime'>
@@ -23639,6 +23673,8 @@ export namespace Prisma {
     score: 'score',
     finalScore: 'finalScore',
     bestScore: 'bestScore',
+    currentLevel: 'currentLevel',
+    questionsAnswered: 'questionsAnswered',
     startedAt: 'startedAt',
     endsAt: 'endsAt',
     submittedAt: 'submittedAt'
@@ -24862,6 +24898,8 @@ export namespace Prisma {
     score?: IntFilter<"InstantSession"> | number
     finalScore?: IntNullableFilter<"InstantSession"> | number | null
     bestScore?: IntFilter<"InstantSession"> | number
+    currentLevel?: IntFilter<"InstantSession"> | number
+    questionsAnswered?: IntFilter<"InstantSession"> | number
     startedAt?: DateTimeFilter<"InstantSession"> | Date | string
     endsAt?: DateTimeNullableFilter<"InstantSession"> | Date | string | null
     submittedAt?: DateTimeNullableFilter<"InstantSession"> | Date | string | null
@@ -24878,6 +24916,8 @@ export namespace Prisma {
     score?: SortOrder
     finalScore?: SortOrderInput | SortOrder
     bestScore?: SortOrder
+    currentLevel?: SortOrder
+    questionsAnswered?: SortOrder
     startedAt?: SortOrder
     endsAt?: SortOrderInput | SortOrder
     submittedAt?: SortOrderInput | SortOrder
@@ -24897,6 +24937,8 @@ export namespace Prisma {
     score?: IntFilter<"InstantSession"> | number
     finalScore?: IntNullableFilter<"InstantSession"> | number | null
     bestScore?: IntFilter<"InstantSession"> | number
+    currentLevel?: IntFilter<"InstantSession"> | number
+    questionsAnswered?: IntFilter<"InstantSession"> | number
     startedAt?: DateTimeFilter<"InstantSession"> | Date | string
     endsAt?: DateTimeNullableFilter<"InstantSession"> | Date | string | null
     submittedAt?: DateTimeNullableFilter<"InstantSession"> | Date | string | null
@@ -24913,6 +24955,8 @@ export namespace Prisma {
     score?: SortOrder
     finalScore?: SortOrderInput | SortOrder
     bestScore?: SortOrder
+    currentLevel?: SortOrder
+    questionsAnswered?: SortOrder
     startedAt?: SortOrder
     endsAt?: SortOrderInput | SortOrder
     submittedAt?: SortOrderInput | SortOrder
@@ -24934,6 +24978,8 @@ export namespace Prisma {
     score?: IntWithAggregatesFilter<"InstantSession"> | number
     finalScore?: IntNullableWithAggregatesFilter<"InstantSession"> | number | null
     bestScore?: IntWithAggregatesFilter<"InstantSession"> | number
+    currentLevel?: IntWithAggregatesFilter<"InstantSession"> | number
+    questionsAnswered?: IntWithAggregatesFilter<"InstantSession"> | number
     startedAt?: DateTimeWithAggregatesFilter<"InstantSession"> | Date | string
     endsAt?: DateTimeNullableWithAggregatesFilter<"InstantSession"> | Date | string | null
     submittedAt?: DateTimeNullableWithAggregatesFilter<"InstantSession"> | Date | string | null
@@ -26638,6 +26684,8 @@ export namespace Prisma {
     score?: number
     finalScore?: number | null
     bestScore?: number
+    currentLevel?: number
+    questionsAnswered?: number
     startedAt?: Date | string
     endsAt?: Date | string | null
     submittedAt?: Date | string | null
@@ -26654,6 +26702,8 @@ export namespace Prisma {
     score?: number
     finalScore?: number | null
     bestScore?: number
+    currentLevel?: number
+    questionsAnswered?: number
     startedAt?: Date | string
     endsAt?: Date | string | null
     submittedAt?: Date | string | null
@@ -26666,6 +26716,8 @@ export namespace Prisma {
     score?: IntFieldUpdateOperationsInput | number
     finalScore?: NullableIntFieldUpdateOperationsInput | number | null
     bestScore?: IntFieldUpdateOperationsInput | number
+    currentLevel?: IntFieldUpdateOperationsInput | number
+    questionsAnswered?: IntFieldUpdateOperationsInput | number
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     endsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     submittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -26682,6 +26734,8 @@ export namespace Prisma {
     score?: IntFieldUpdateOperationsInput | number
     finalScore?: NullableIntFieldUpdateOperationsInput | number | null
     bestScore?: IntFieldUpdateOperationsInput | number
+    currentLevel?: IntFieldUpdateOperationsInput | number
+    questionsAnswered?: IntFieldUpdateOperationsInput | number
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     endsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     submittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -26696,6 +26750,8 @@ export namespace Prisma {
     score?: number
     finalScore?: number | null
     bestScore?: number
+    currentLevel?: number
+    questionsAnswered?: number
     startedAt?: Date | string
     endsAt?: Date | string | null
     submittedAt?: Date | string | null
@@ -26707,6 +26763,8 @@ export namespace Prisma {
     score?: IntFieldUpdateOperationsInput | number
     finalScore?: NullableIntFieldUpdateOperationsInput | number | null
     bestScore?: IntFieldUpdateOperationsInput | number
+    currentLevel?: IntFieldUpdateOperationsInput | number
+    questionsAnswered?: IntFieldUpdateOperationsInput | number
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     endsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     submittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -26720,6 +26778,8 @@ export namespace Prisma {
     score?: IntFieldUpdateOperationsInput | number
     finalScore?: NullableIntFieldUpdateOperationsInput | number | null
     bestScore?: IntFieldUpdateOperationsInput | number
+    currentLevel?: IntFieldUpdateOperationsInput | number
+    questionsAnswered?: IntFieldUpdateOperationsInput | number
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     endsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     submittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -28608,6 +28668,8 @@ export namespace Prisma {
     score?: SortOrder
     finalScore?: SortOrder
     bestScore?: SortOrder
+    currentLevel?: SortOrder
+    questionsAnswered?: SortOrder
     startedAt?: SortOrder
     endsAt?: SortOrder
     submittedAt?: SortOrder
@@ -28617,6 +28679,8 @@ export namespace Prisma {
     score?: SortOrder
     finalScore?: SortOrder
     bestScore?: SortOrder
+    currentLevel?: SortOrder
+    questionsAnswered?: SortOrder
   }
 
   export type InstantSessionMaxOrderByAggregateInput = {
@@ -28627,6 +28691,8 @@ export namespace Prisma {
     score?: SortOrder
     finalScore?: SortOrder
     bestScore?: SortOrder
+    currentLevel?: SortOrder
+    questionsAnswered?: SortOrder
     startedAt?: SortOrder
     endsAt?: SortOrder
     submittedAt?: SortOrder
@@ -28640,6 +28706,8 @@ export namespace Prisma {
     score?: SortOrder
     finalScore?: SortOrder
     bestScore?: SortOrder
+    currentLevel?: SortOrder
+    questionsAnswered?: SortOrder
     startedAt?: SortOrder
     endsAt?: SortOrder
     submittedAt?: SortOrder
@@ -28649,6 +28717,8 @@ export namespace Prisma {
     score?: SortOrder
     finalScore?: SortOrder
     bestScore?: SortOrder
+    currentLevel?: SortOrder
+    questionsAnswered?: SortOrder
   }
 
   export type EnumInstantTournamentSessionStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -31184,6 +31254,8 @@ export namespace Prisma {
     score?: number
     finalScore?: number | null
     bestScore?: number
+    currentLevel?: number
+    questionsAnswered?: number
     startedAt?: Date | string
     endsAt?: Date | string | null
     submittedAt?: Date | string | null
@@ -31198,6 +31270,8 @@ export namespace Prisma {
     score?: number
     finalScore?: number | null
     bestScore?: number
+    currentLevel?: number
+    questionsAnswered?: number
     startedAt?: Date | string
     endsAt?: Date | string | null
     submittedAt?: Date | string | null
@@ -31736,6 +31810,8 @@ export namespace Prisma {
     score?: IntFilter<"InstantSession"> | number
     finalScore?: IntNullableFilter<"InstantSession"> | number | null
     bestScore?: IntFilter<"InstantSession"> | number
+    currentLevel?: IntFilter<"InstantSession"> | number
+    questionsAnswered?: IntFilter<"InstantSession"> | number
     startedAt?: DateTimeFilter<"InstantSession"> | Date | string
     endsAt?: DateTimeNullableFilter<"InstantSession"> | Date | string | null
     submittedAt?: DateTimeNullableFilter<"InstantSession"> | Date | string | null
@@ -32830,6 +32906,8 @@ export namespace Prisma {
     score?: number
     finalScore?: number | null
     bestScore?: number
+    currentLevel?: number
+    questionsAnswered?: number
     startedAt?: Date | string
     endsAt?: Date | string | null
     submittedAt?: Date | string | null
@@ -32845,6 +32923,8 @@ export namespace Prisma {
     score?: number
     finalScore?: number | null
     bestScore?: number
+    currentLevel?: number
+    questionsAnswered?: number
     startedAt?: Date | string
     endsAt?: Date | string | null
     submittedAt?: Date | string | null
@@ -32986,6 +33066,8 @@ export namespace Prisma {
     score?: IntFieldUpdateOperationsInput | number
     finalScore?: NullableIntFieldUpdateOperationsInput | number | null
     bestScore?: IntFieldUpdateOperationsInput | number
+    currentLevel?: IntFieldUpdateOperationsInput | number
+    questionsAnswered?: IntFieldUpdateOperationsInput | number
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     endsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     submittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -33001,6 +33083,8 @@ export namespace Prisma {
     score?: IntFieldUpdateOperationsInput | number
     finalScore?: NullableIntFieldUpdateOperationsInput | number | null
     bestScore?: IntFieldUpdateOperationsInput | number
+    currentLevel?: IntFieldUpdateOperationsInput | number
+    questionsAnswered?: IntFieldUpdateOperationsInput | number
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     endsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     submittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -33012,6 +33096,8 @@ export namespace Prisma {
     score?: number
     finalScore?: number | null
     bestScore?: number
+    currentLevel?: number
+    questionsAnswered?: number
     startedAt?: Date | string
     endsAt?: Date | string | null
     submittedAt?: Date | string | null
@@ -33026,6 +33112,8 @@ export namespace Prisma {
     score?: number
     finalScore?: number | null
     bestScore?: number
+    currentLevel?: number
+    questionsAnswered?: number
     startedAt?: Date | string
     endsAt?: Date | string | null
     submittedAt?: Date | string | null
@@ -35089,6 +35177,8 @@ export namespace Prisma {
     score?: number
     finalScore?: number | null
     bestScore?: number
+    currentLevel?: number
+    questionsAnswered?: number
     startedAt?: Date | string
     endsAt?: Date | string | null
     submittedAt?: Date | string | null
@@ -35446,6 +35536,8 @@ export namespace Prisma {
     score?: IntFieldUpdateOperationsInput | number
     finalScore?: NullableIntFieldUpdateOperationsInput | number | null
     bestScore?: IntFieldUpdateOperationsInput | number
+    currentLevel?: IntFieldUpdateOperationsInput | number
+    questionsAnswered?: IntFieldUpdateOperationsInput | number
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     endsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     submittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -35460,6 +35552,8 @@ export namespace Prisma {
     score?: IntFieldUpdateOperationsInput | number
     finalScore?: NullableIntFieldUpdateOperationsInput | number | null
     bestScore?: IntFieldUpdateOperationsInput | number
+    currentLevel?: IntFieldUpdateOperationsInput | number
+    questionsAnswered?: IntFieldUpdateOperationsInput | number
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     endsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     submittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -35473,6 +35567,8 @@ export namespace Prisma {
     score?: IntFieldUpdateOperationsInput | number
     finalScore?: NullableIntFieldUpdateOperationsInput | number | null
     bestScore?: IntFieldUpdateOperationsInput | number
+    currentLevel?: IntFieldUpdateOperationsInput | number
+    questionsAnswered?: IntFieldUpdateOperationsInput | number
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     endsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     submittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -35989,6 +36085,8 @@ export namespace Prisma {
     score?: number
     finalScore?: number | null
     bestScore?: number
+    currentLevel?: number
+    questionsAnswered?: number
     startedAt?: Date | string
     endsAt?: Date | string | null
     submittedAt?: Date | string | null
@@ -36010,6 +36108,8 @@ export namespace Prisma {
     score?: IntFieldUpdateOperationsInput | number
     finalScore?: NullableIntFieldUpdateOperationsInput | number | null
     bestScore?: IntFieldUpdateOperationsInput | number
+    currentLevel?: IntFieldUpdateOperationsInput | number
+    questionsAnswered?: IntFieldUpdateOperationsInput | number
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     endsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     submittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -36024,6 +36124,8 @@ export namespace Prisma {
     score?: IntFieldUpdateOperationsInput | number
     finalScore?: NullableIntFieldUpdateOperationsInput | number | null
     bestScore?: IntFieldUpdateOperationsInput | number
+    currentLevel?: IntFieldUpdateOperationsInput | number
+    questionsAnswered?: IntFieldUpdateOperationsInput | number
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     endsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     submittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -36037,6 +36139,8 @@ export namespace Prisma {
     score?: IntFieldUpdateOperationsInput | number
     finalScore?: NullableIntFieldUpdateOperationsInput | number | null
     bestScore?: IntFieldUpdateOperationsInput | number
+    currentLevel?: IntFieldUpdateOperationsInput | number
+    questionsAnswered?: IntFieldUpdateOperationsInput | number
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     endsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     submittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null

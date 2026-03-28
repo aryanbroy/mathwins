@@ -1,3 +1,4 @@
+import { log } from 'console';
 import {
   MAX_PLAYERS,
   SESSION_DURATION_MIN,
@@ -34,11 +35,14 @@ export const joinOrCreateRoomHandler = async (
   userId: string,
   now: Date
 ): Promise<InstantTournament> => {
+  // console.log('Now: ', now);
+  // console.log('Valid expiry interval: ', validExpiryInterval(now));
+
   const tournaments = await tx.$queryRaw<
     InstantTournament[]
   >`SELECT * FROM "InstantTournament"
     where status = 'OPEN'
-    AND "expiresAt" >  ${validExpiryInterval(now)}
+    AND "expiresAt" >  ${now}
     AND "playersCount" < ${MAX_PLAYERS}
     ORDER BY "createdAt" ASC
     LIMIT 1
@@ -190,6 +194,7 @@ export const submitQuestionHandler = async (
   timeTakenMs: number
 ): Promise<InstantSession> => {
   try {
+    const isAnswerCorrect = question.correctDigit === answer;
     const incrementalScore = calculateInstantScore(
       answer,
       question.correctDigit,
@@ -200,6 +205,7 @@ export const submitQuestionHandler = async (
       tx,
       sessionId,
       incrementalScore,
+      isAnswerCorrect
     );
 
     return updatedSession;

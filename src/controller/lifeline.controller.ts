@@ -82,7 +82,8 @@ export const FiftyFifty = async (req: Request, res: Response) => {
 
 export const LevelDown = async (req: Request, res: Response) => {
   try {
-    const { sessionType, sessionId, questionId } = req.body.params;
+    // console.log('Params: ', req.body);
+    const { sessionType, sessionId, questionId } = req.body;
     const { id: userId } = req.userData;
     if (!sessionId || !questionId || !sessionType) {
       return res.status(400).json({
@@ -91,7 +92,7 @@ export const LevelDown = async (req: Request, res: Response) => {
       });
     }
 
-    let session:any;
+    let session: any;
     if (sessionType === 'daily') {
       session = await prisma.dailyTournamentSession.findUnique({
         where: { id: sessionId },
@@ -169,15 +170,17 @@ export const LevelDown = async (req: Request, res: Response) => {
     //   });
     // }
 
+    console.log();
     const newLevel = Math.max(1, session.currentLevel - 1);
 
     // Generate new question at lower level
+    console.log('Newlevel: ', newLevel);
     const newGeneratedQuestion: QuestionData = await generateQuestion(newLevel);
+    console.log('New generated question: ', newGeneratedQuestion);
 
-    // Delete the current question (optional - you can keep it as skipped)
-    await prisma.questionAttempt.delete({
-      where: { id: questionId },
-    });
+    // await prisma.questionAttempt.delete({
+    //   where: { id: questionId },
+    // });
 
     // Create new question at lower level
     let newQuestion;
@@ -203,7 +206,7 @@ export const LevelDown = async (req: Request, res: Response) => {
       });
     } else if (sessionType === 'instant') {
       console.log(`-----------instant passed-----------`);
-      
+
       newQuestion = await prisma.questionAttempt.create({
         data: {
           questionIndex: session.questionsAnswered + 1,
@@ -213,13 +216,12 @@ export const LevelDown = async (req: Request, res: Response) => {
           side: newGeneratedQuestion.side,
           kthDigit: newGeneratedQuestion.kthDigit,
           correctDigit: newGeneratedQuestion.correctDigit,
-          instantSessionId: sessionId, 
+          instantSessionId: sessionId, // error here
         },
       });
     } else {
       console.log(`-----------solo passed-----------`);
       newQuestion = await prisma.questionAttempt.create({
-
         data: {
           soloSessionId: sessionId,
           questionIndex: session.questionsAnswered + 1,
@@ -245,7 +247,8 @@ export const LevelDown = async (req: Request, res: Response) => {
     console.log('New question created at lower level:', newQuestion);
 
     // Sanitize question for frontend
-    const { id, questionIndex, expression, kthDigit, level, side } = newQuestion;
+    const { id, questionIndex, expression, kthDigit, level, side } =
+      newQuestion;
     const sanitizedQuestion = {
       id,
       questionIndex,

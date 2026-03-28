@@ -261,10 +261,12 @@ model InstantSession {
   tournamentId String
   tournament   InstantTournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
 
-  questions  QuestionAttempt[]
-  score      Int               @default(0)
-  finalScore Int?
-  bestScore  Int               @default(0)
+  questions         QuestionAttempt[]
+  score             Int               @default(0)
+  finalScore        Int?
+  bestScore         Int               @default(0)
+  currentLevel      Int               @default(1)
+  questionsAnswered Int               @default(0)
 
   startedAt   DateTime  @default(now())
   endsAt      DateTime?

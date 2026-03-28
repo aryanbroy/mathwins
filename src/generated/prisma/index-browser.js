@@ -250,6 +250,8 @@ exports.Prisma.InstantSessionScalarFieldEnum = {
   score: 'score',
   finalScore: 'finalScore',
   bestScore: 'bestScore',
+  currentLevel: 'currentLevel',
+  questionsAnswered: 'questionsAnswered',
   startedAt: 'startedAt',
   endsAt: 'endsAt',
   submittedAt: 'submittedAt'

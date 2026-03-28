@@ -84,7 +84,7 @@ export const createUser = async (req: Request, res: Response) => {
   // check if referralCode exists or active for now
   // if so then create new user accordingly and change exixsting DB
   let referrer = null;
-  const refinedReferralCode = referralCode.trim();
+  const refinedReferralCode = referralCode;
   if (refinedReferralCode) {
     referrer = await prisma.user.findUnique({
       where: { referralCode: refinedReferralCode },
@@ -157,7 +157,15 @@ export const getUser = async (req: Request, res: Response) => {
     console.log('existing ', existingUser);
 
     const isAdmin = ADMIN_EMAILS.includes(existingUser.email);
-    return res.status(200).json(new ApiResponse(200, {...user, coins: existingUser.coins, isAdmin}, 'user created'));
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { ...user, coins: existingUser.coins, isAdmin },
+          'user created'
+        )
+      );
   } catch (error) {
     console.log(error);
     throw new ApiError({ statusCode: 500, message: 'Internal server error' });

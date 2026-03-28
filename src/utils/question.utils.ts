@@ -83,17 +83,21 @@ class SeededRandom {
   weighted(weights: { [key: string]: number }): string {
     const total = Object.values(weights).reduce((sum, w) => sum + w, 0);
     let random = this.next() * total;
-    
+
     for (const [key, weight] of Object.entries(weights)) {
       random -= weight;
       if (random <= 0) return key;
     }
-    
+
     return Object.keys(weights)[0];
   }
 }
 
-export const generateQuestion = async (level: number,seed?: number,config: LevelingConfig = DEFAULT_CONFIG): Promise<GeneratedQuestion> => {
+export const generateQuestion = async (
+  level: number,
+  seed?: number,
+  config: LevelingConfig = DEFAULT_CONFIG
+): Promise<GeneratedQuestion> => {
   try {
     //select level
     // generate seed
@@ -111,7 +115,7 @@ export const generateQuestion = async (level: number,seed?: number,config: Level
 
     while (attempts < maxAttempts) {
       attempts++;
-      
+
       try {
         const question = generateQuestionAttempt(
           clampedLevel,
@@ -121,8 +125,9 @@ export const generateQuestion = async (level: number,seed?: number,config: Level
           random,
           config
         );
-        
+
         if (question) {
+          console.log('Returning question: ', question);
           return question;
         }
       } catch (err) {
@@ -131,7 +136,6 @@ export const generateQuestion = async (level: number,seed?: number,config: Level
       }
     }
     return generateFallbackQuestion(clampedLevel, random);
-    
   } catch (err) {
     console.error('Error generating question:', err);
     throw new Error('Failed to generate question');
@@ -145,7 +149,6 @@ function generateQuestionAttempt(
   random: SeededRandom,
   config: LevelingConfig
 ): GeneratedQuestion | null {
-
   const operands: number[] = [];
   for (let i = 0; i < termCount; i++) {
     const digits = Math.max(2, targetDigits - 1);
@@ -164,9 +167,9 @@ function generateQuestionAttempt(
   for (let i = 0; i < operators.length; i++) {
     const op = operators[i];
     const operand = operands[i + 1];
-    
+
     expression += ` ${op} ${operand}`;
-    
+
     switch (op) {
       case '+':
         result += operand;
@@ -179,7 +182,7 @@ function generateQuestionAttempt(
         break;
       case '÷':
         if (config.div_policy.nonzero_divisor && operand === 0) {
-          return null; 
+          return null;
         }
         if (config.div_policy.integer_only && result % operand !== 0) {
           return null;
@@ -192,22 +195,24 @@ function generateQuestionAttempt(
   if (result === 0) {
     return null;
   }
-  
+
   const resultStr = result.toString();
   if (resultStr.length < 1) {
     return null;
   }
-  
-  const side = random.weighted(config.ask_digit_side_weights) as 'front' | 'right';
+
+  const side = random.weighted(config.ask_digit_side_weights) as
+    | 'front'
+    | 'right';
   const maxFromFrontDigits = Math.ceil(
     resultStr.length * (config.kth_digit_rules.max_from_front_pct / 100)
   );
   const maxFromRightDigits = Math.ceil(
     resultStr.length * (config.kth_digit_rules.max_from_right_pct / 100)
   );
-  
+
   let kthDigit: number;
-  
+
   if (side === 'front') {
     const maxK = Math.min(maxFromFrontDigits, resultStr.length);
     kthDigit = random.nextInt(
@@ -225,7 +230,7 @@ function generateQuestionAttempt(
   let correctDigit: number;
   if (side === 'front') {
     if (kthDigit > resultStr.length) {
-      return null; 
+      return null;
     }
     correctDigit = parseInt(resultStr[kthDigit - 1]);
   } else {
@@ -234,12 +239,12 @@ function generateQuestionAttempt(
     }
     correctDigit = parseInt(resultStr[resultStr.length - kthDigit]);
   }
-  
+
   if (isNaN(correctDigit)) {
     return null;
   }
   const id = `q_${Date.now()}_${random.nextInt(1000, 9999)}`;
-  
+
   return {
     expression,
     result: resultStr,
@@ -257,16 +262,17 @@ function generateFallbackQuestion(
   const a = random.nextInt(10, 99);
   const b = random.nextInt(10, 99);
   const result = (a + b).toString();
-  const side: 'front' | 'right' = random.nextInt(0, 1) === 0 ? 'front' : 'right';
+  const side: 'front' | 'right' =
+    random.nextInt(0, 1) === 0 ? 'front' : 'right';
   const kthDigit = random.nextInt(1, result.length);
-  
+
   let correctDigit: number;
   if (side === 'front') {
     correctDigit = parseInt(result[kthDigit - 1]);
   } else {
     correctDigit = parseInt(result[result.length - kthDigit]);
   }
-  
+
   return {
     expression: `${a} + ${b}`,
     result,
@@ -283,12 +289,12 @@ export const generateQuestions = async (
 ): Promise<GeneratedQuestion[]> => {
   const questions: GeneratedQuestion[] = [];
   const seed = baseSeed || Date.now();
-  
+
   for (let i = 0; i < count; i++) {
     const question = await generateQuestion(level, seed + i * 1000);
     questions.push(question);
   }
-  
+
   return questions;
 };
 export const validateAnswer = (
