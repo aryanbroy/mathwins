@@ -84,7 +84,7 @@ export const createUser = async (req: Request, res: Response) => {
   // check if referralCode exists or active for now
   // if so then create new user accordingly and change exixsting DB
   let referrer = null;
-  const refinedReferralCode = referralCode;
+  const refinedReferralCode = referralCode.trim();
   if (refinedReferralCode) {
     referrer = await prisma.user.findUnique({
       where: { referralCode: refinedReferralCode },
