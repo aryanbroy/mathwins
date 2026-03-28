@@ -73,21 +73,75 @@ export const fetchDailyTournament = async (req: Request, res: Response) => {
     .json(new ApiResponse(200, tournament, 'fetched daily tournament details'));
 };
 
+// export const createDailyTournament = asyncHandler(
+//   async (req: Request, res: Response) => {
+//     // const {userId: id} = req
+//     // if (!id) {
+//     //   throw new ApiError({
+//     //     statusCode: 400,
+//     //     message: 'Invalid user id',
+//     //   });
+//     // }
+//     const today = new Date();
+//     const tournamentStartDate = new Date(
+//       Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+//     );
+
+//     const dailyTournamentAttempt = await prisma.dailyTournament.create({
+//       data: {
+//         date: tournamentStartDate,
+//       },
+//     });
+//     if(dailyTournamentAttempt){
+//       res
+//         .status(201)
+//         .json(
+//           new ApiResponse(
+//             201,
+//             dailyTournamentAttempt,
+//             'Created daily tournament successfuly'
+//           )
+//         );
+//       } else {
+//       res
+//         .status(401)
+//         .json(
+//           new ApiResponse(
+//             401,
+//             'erroe : my non ---- Created daily tournament successfuly'
+//           )
+//         );
+//     }
+//   }
+// );
+
 export const createDailyTournament = asyncHandler(
   async (req: Request, res: Response) => {
-    // const {userId: id} = req
-    // if (!id) {
-    //   throw new ApiError({
-    //     statusCode: 400,
-    //     message: 'Invalid user id',
-    //   });
-    // }
-
     const today = new Date();
     const tournamentStartDate = new Date(
       Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
     );
 
+    // Check if a tournament already exists for today
+    const existingTournament = await prisma.dailyTournament.findUnique({
+      where: {
+        date: tournamentStartDate,
+      },
+    });
+
+    if (existingTournament) {
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            existingTournament,
+            `Daily tournament already open for today : ${tournamentStartDate}`
+          )
+        );
+    }
+
+    // Create new tournament if it doesn't exist
     const dailyTournamentAttempt = await prisma.dailyTournament.create({
       data: {
         date: tournamentStartDate,
@@ -100,7 +154,7 @@ export const createDailyTournament = asyncHandler(
         new ApiResponse(
           201,
           dailyTournamentAttempt,
-          'Created daily tournament successfuly'
+          'Created daily tournament successfully'
         )
       );
   }
@@ -297,6 +351,7 @@ export const submitQuestion = asyncHandler(
           acknowledged: true,
           currentScore,
           correctAnswer,
+
         },
         'Answer submitted'
       )

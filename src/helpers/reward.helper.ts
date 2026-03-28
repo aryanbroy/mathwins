@@ -1,3 +1,4 @@
+import { getActiveGameConfig } from '../controller/admin/editconfig.controller';
 import { leaderboard } from '../controller/solo.controller';
 import { Prisma } from '../generated/prisma';
 import prisma from '../prisma';
@@ -32,8 +33,22 @@ export const postClaimRequestHandler = async (
     });
   }
 
-  // this should come from config: later
-  if (user.coins < 5000) {
+  const activeConfig = await tx.gameConfig.findFirst({
+    where: { isActive: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!activeConfig) {
+    throw new ApiError({
+      statusCode: 404,
+      message: 'No active game config found',
+    });
+  }
+  const redeem_threshold_coins = (activeConfig?.rewards as any)?.redeem_threshold_coins;
+  const redeem_coins = Math.floor(user.coins / 1000) * 1000;
+  console.log(user,"/n",redeem_threshold_coins);
+  
+  if (user.coins < redeem_threshold_coins)  {
     throw new ApiError({
       statusCode: 400,
       message: 'Not eligible to claim reward',
@@ -45,37 +60,32 @@ export const postClaimRequestHandler = async (
       data: {
         userId,
         status: 'PENDING',
-        coinsLocked: 5000, // make coins locked variable later
+        coinsLocked: redeem_coins,
       },
     });
 
-    tx.user.update({
+    const newUser = await tx.user.update({
       where: { id: userId },
-      data: { coins: { decrement: 5000 } }, // make this variable later
+      data: { coins: { decrement: redeem_coins } },
     });
-
+    console.log("updated User after decrement : ",newUser);
+    
     await tx.coinLedger.create({
       data: {
         userId,
         date: new Date(),
-        delta: -5000, // make this variable too: later
+        delta: -(redeem_coins),
         source: 'REWARD_LOCK',
         referenceId: claim.id,
       },
     });
 
-    return { claim };
+    return { claim, newUser };
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError) {
-      console.log('unique constraint error while claiming reward');
-      if (e.code === 'P2002') {
-        throw new ApiError({
-          statusCode: 409,
-          message: 'Claim already exists',
-        });
-      }
-    }
-    throw e;
+    throw new ApiError({
+      statusCode: 409,
+      message: 'Claim already exists',
+    });
   }
 };
 
@@ -118,6 +128,7 @@ export const listRewardClaimsHandler = async (
       rejectionReason: true,
       adminNotes: true,
       createdAt: true,
+      updatedAt: true,
       id: true,
     },
     orderBy: {
@@ -132,6 +143,7 @@ export const listRewardClaimsHandler = async (
         status: CLAIM_STATUS_MAP[claim.status],
         coinsLocked: claim.coinsLocked,
         createdAt: claim.createdAt,
+        updatedAt: claim.updatedAt
       };
     } else if (claim.status === 'FULFILLED') {
       return {
@@ -141,6 +153,7 @@ export const listRewardClaimsHandler = async (
         createdAt: claim.createdAt,
         voucherCode: claim.voucherCode!,
         adminNotes: claim.adminNotes,
+        updatedAt: claim.updatedAt
       };
     } else if (claim.status === 'REJECTED') {
       return {
@@ -150,6 +163,7 @@ export const listRewardClaimsHandler = async (
         createdAt: claim.createdAt,
         rejectionReason: claim.rejectionReason!,
         adminNotes: claim.adminNotes,
+        updatedAt: claim.updatedAt
       };
     }
 
@@ -158,6 +172,7 @@ export const listRewardClaimsHandler = async (
       status: CLAIM_STATUS_MAP[claim.status] || claim.status,
       coinsLocked: claim.coinsLocked,
       createdAt: claim.createdAt,
+      updatedAt: claim.updatedAt
     };
   });
 

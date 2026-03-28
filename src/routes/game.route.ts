@@ -6,6 +6,6 @@ const router = Router();
 
 router.post('/addquestion', demoQuestion);
 router.get('/createGameConfig', createGameConfigFromFile);
-router.post('/gameConfig', getActiveGameConfig);
+router.get('/gameConfig', getActiveGameConfig);
 
 export default router;

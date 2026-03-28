@@ -36,8 +36,9 @@ export const isAdmin = async (
     return res.status(403).json({ ok: false, error: "Admin access required" });
   }
   console.log(verifiedUser?.email," authorized");
-  req.userId = verifiedUser.id;
-  req.email = verifiedUser.email;
-  
+  req.userData = {
+    id: verifiedUser.userId,
+    email : verifiedUser.email
+  }
   next();
 };

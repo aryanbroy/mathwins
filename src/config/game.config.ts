@@ -93,7 +93,7 @@ const gameConfig = {
       { range: '50-100', points: 1 },
     ],
     daily_points_distribution: [
-      { range: '0-1', points: 30 }, // top 0-1% get 30 CP (matches PRD example tables)
+      { range: '0-1', points: 30 },
       { range: '1-2', points: 20 },
       { range: '2-5', points: 15 },
       { range: '5-10', points: 10 },

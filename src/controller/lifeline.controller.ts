@@ -91,7 +91,7 @@ export const LevelDown = async (req: Request, res: Response) => {
       });
     }
 
-    let session;
+    let session:any;
     if (sessionType === 'daily') {
       session = await prisma.dailyTournamentSession.findUnique({
         where: { id: sessionId },
@@ -133,12 +133,12 @@ export const LevelDown = async (req: Request, res: Response) => {
         message: 'Session does not belong to this user',
       });
     }
-    if (session.status !== 'IN_PROGRESS') {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot use lifeline: Session is ${session.status}`,
-      });
-    }
+    // if (session.status !== 'IN_PROGRESS') {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: `Cannot use lifeline: Session is ${session.status}`,
+    //   });
+    // }
 
     // Verify question exists
     const question = await prisma.questionAttempt.findUnique({
@@ -202,9 +202,10 @@ export const LevelDown = async (req: Request, res: Response) => {
         },
       });
     } else if (sessionType === 'instant') {
+      console.log(`-----------instant passed-----------`);
+      
       newQuestion = await prisma.questionAttempt.create({
         data: {
-          instantSessionId: sessionId,
           questionIndex: session.questionsAnswered + 1,
           level: newGeneratedQuestion.level,
           expression: newGeneratedQuestion.expression,
@@ -212,10 +213,13 @@ export const LevelDown = async (req: Request, res: Response) => {
           side: newGeneratedQuestion.side,
           kthDigit: newGeneratedQuestion.kthDigit,
           correctDigit: newGeneratedQuestion.correctDigit,
+          instantSessionId: sessionId, 
         },
       });
     } else {
+      console.log(`-----------solo passed-----------`);
       newQuestion = await prisma.questionAttempt.create({
+
         data: {
           soloSessionId: sessionId,
           questionIndex: session.questionsAnswered + 1,

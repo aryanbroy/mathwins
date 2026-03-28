@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../middlewares/asyncHandler';
 import {
   aggregateCoinPointsHandler,
-  assigndailyCoinPoints,
+  assignDailyCoinPoints,
   assignInstantCoinPointsHandler,
   getDailyUserLeaderboardHandler,
 } from '../helpers/cron.helper';
@@ -16,8 +16,8 @@ export const assignCoinPoints = asyncHandler(
       Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
     );
 
-    await assigndailyCoinPoints(tournamentStartDate);
-    // await assignSoloCoinPoints(tournamentStartDate);
+    // await assigndailyCoinPoints(tournamentStartDate);
+    await assignDailyCoinPoints(tournamentStartDate);
 
     res
       .status(200)
