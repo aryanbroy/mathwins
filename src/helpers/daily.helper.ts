@@ -12,6 +12,7 @@ export const processQuestionScore = async (
   currentScore: number;
   correctAnswer: number;
   level: number;
+  isCorrect: boolean;
 }> => {
   console.log('evaluating score...');
   console.log('');
@@ -71,6 +72,7 @@ export const processQuestionScore = async (
     currentScore: updatedSession.currentScore,
     correctAnswer: question.correctDigit,
     level: updatedSession.currentLevel,
+    isCorrect,
   };
 };
 

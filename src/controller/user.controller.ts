@@ -9,15 +9,21 @@ import {
   coinsSummaryHandler,
   getUserTransactionsHandler,
 } from '../helpers/user.helper';
-import { ADMIN_EMAILS } from "../config/admin";
+import { ADMIN_EMAILS } from '../config/admin';
 
-async function generateReferralCode(email?: string, phone?: string):Promise<string>{
-  let code:string = '';
+async function generateReferralCode(
+  email?: string,
+  phone?: string
+): Promise<string> {
+  let code: string = '';
   let isUnique = false;
 
   while (!isUnique) {
     // Generate code
-    const hash = crypto.createHash('sha256').update(email! + Math.random()).digest('hex');
+    const hash = crypto
+      .createHash('sha256')
+      .update(email! + Math.random())
+      .digest('hex');
     code = hash.slice(0, 8).toUpperCase();
 
     // Check database
@@ -28,7 +34,7 @@ async function generateReferralCode(email?: string, phone?: string):Promise<stri
     });
     if (!existing) isUnique = true;
   }
-  
+
   return code;
 }
 
@@ -39,7 +45,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
 export const createUser = async (req: Request, res: Response) => {
   const { username, email, picture, referralCode } = req.body;
   console.log('createUser :- ', req.body);
-  // const 
+  // const
   if (!username || !email) {
     throw new ApiError({
       statusCode: 400,
@@ -56,11 +62,21 @@ export const createUser = async (req: Request, res: Response) => {
 
   if (existingUser) {
     console.log('username already exists');
-    const {id: userId, username, email, profilePictureUrl: picture, referralCode} = existingUser;
+    const {
+      id: userId,
+      username,
+      email,
+      profilePictureUrl: picture,
+      referralCode,
+    } = existingUser;
     const JWT_SECRET = process.env.JWT_SECRET as string;
-    const jwtSting = jwt.sign({ userId, username, email, picture, referralCode }, JWT_SECRET, {
-      expiresIn: '7d',
-    });
+    const jwtSting = jwt.sign(
+      { userId, username, email, picture, referralCode },
+      JWT_SECRET,
+      {
+        expiresIn: '7d',
+      }
+    );
     return res
       .status(201)
       .json(new ApiResponse(201, jwtSting, 'Created new Session succussfully'));
@@ -77,7 +93,7 @@ export const createUser = async (req: Request, res: Response) => {
     if (!referrer) {
       return res.status(400).json({
         success: false,
-        message: "Invalid referral code",
+        message: 'Invalid referral code',
       });
     }
   }
@@ -101,21 +117,25 @@ export const createUser = async (req: Request, res: Response) => {
     const referral = await prisma.referral.create({
       data: {
         referrer: {
-          connect: { id: referrer.id }
+          connect: { id: referrer.id },
         },
         referee: {
-          connect: { id: user.id }
+          connect: { id: user.id },
         },
         referralCode: refinedReferralCode,
-        status: "PENDING"
+        status: 'PENDING',
       },
-    })
+    });
   }
   const userId = user.id;
   const JWT_SECRET = process.env.JWT_SECRET as string;
-  const jwtSting = jwt.sign({ userId, username, email, picture, referralCode: generateNewReferralCode }, JWT_SECRET, {
-    expiresIn: '7d',
-  });
+  const jwtSting = jwt.sign(
+    { userId, username, email, picture, referralCode: generateNewReferralCode },
+    JWT_SECRET,
+    {
+      expiresIn: '7d',
+    }
+  );
   res
     .status(201)
     .json(new ApiResponse(201, jwtSting, 'Created new user succussfully'));
@@ -127,17 +147,25 @@ export const getUser = async (req: Request, res: Response) => {
     console.log('Token: ', token);
 
     const JWT_SECRET = process.env.JWT_SECRET as string;
-    const user:any = jwt.verify(token, JWT_SECRET);
-    console.log("getUser :- ",user);
-    const existingUser:any = await prisma.user.findFirst({
+    const user: any = jwt.verify(token, JWT_SECRET);
+    console.log('getUser :- ', user);
+    const existingUser: any = await prisma.user.findFirst({
       where: {
         id: user.userId,
       },
     });
-    console.log("existing ", existingUser);
-    
+    console.log('existing ', existingUser);
+
     const isAdmin = ADMIN_EMAILS.includes(existingUser.email);
-    return res.status(200).json(new ApiResponse(200, {...user, coins: existingUser.lifetimeCoins, isAdmin}, 'user created'));
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { ...user, coins: existingUser.lifetimeCoins, isAdmin },
+          'user created'
+        )
+      );
   } catch (error) {
     console.log(error);
     throw new ApiError({ statusCode: 500, message: 'Internal server error' });
@@ -155,7 +183,7 @@ export const getCoinsSummary = asyncHandler(
       });
     }
 
-    const result = await prisma.$transaction(async (tx : any) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       const summary = await coinsSummaryHandler(tx, userId);
       return summary;
     });

@@ -233,6 +233,7 @@ export const submitQuestion = asyncHandler(
       new ApiResponse(
         200,
         {
+          success: result.question.correctDigit === answer,
           userId: userId,
           questionId: questionId,
           nextQuestion: result.newQuestion,

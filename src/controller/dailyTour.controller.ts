@@ -259,12 +259,13 @@ export const submitQuestion = asyncHandler(
     console.log('previous score: ', session.currentScore);
     console.log('');
 
-    const { currentScore, correctAnswer, level } = await processQuestionScore(
-      questionId,
-      dailyTournamentSessionId,
-      answer,
-      timeTaken
-    );
+    const { currentScore, correctAnswer, level, isCorrect } =
+      await processQuestionScore(
+        questionId,
+        dailyTournamentSessionId,
+        answer,
+        timeTaken
+      );
 
     const newGeneratedQuestion = await generateQuestion(level);
 
@@ -289,6 +290,7 @@ export const submitQuestion = asyncHandler(
       new ApiResponse(
         202,
         {
+          success: isCorrect,
           userId,
           questionId,
           nextQuestion: newQuestion,
