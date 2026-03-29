@@ -83,7 +83,7 @@ export const FiftyFifty = async (req: Request, res: Response) => {
 export const LevelDown = async (req: Request, res: Response) => {
   try {
     // console.log('Params: ', req.body);
-    const { sessionType, sessionId, questionId } = req.body;
+    const { sessionType, sessionId, questionId } = req.body.params;
     const { id: userId } = req.userData;
     if (!sessionId || !questionId || !sessionType) {
       return res.status(400).json({
