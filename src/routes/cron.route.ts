@@ -11,6 +11,6 @@ const router = Router();
 router.post('/daily', assignCoinPoints);
 router.post('/instant', assignInstantCoinPoints);
 router.post('/total', assignTotalPoints);
-router.post('/dailyUserLeaderboard', getDailyUserLeaderboard);
+router.get('/dailyUserLeaderboard', getDailyUserLeaderboard);
 
 export default router;

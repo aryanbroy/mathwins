@@ -20,7 +20,7 @@ import { ApiError } from '../utils/api/ApiError';
 //   // initial coin points assign
 //   await prisma.$executeRaw`
 //     WITH ranked AS (
-//       SELECT 
+//       SELECT
 //         id,
 //         PERCENT_RANK() OVER (ORDER BY "bestScore" DESC) AS pct
 //       FROM "DailyLeaderboard"
@@ -50,7 +50,7 @@ import { ApiError } from '../utils/api/ApiError';
 //       WHERE "date" = ${tournamentStartDate} AND "coinPoints" >= 5
 //     ),
 //     ranked AS (
-//       SELECT 
+//       SELECT
 //         id,
 //         PERCENT_RANK() OVER (ORDER BY "bestScore" DESC) AS pct
 //       FROM eligible
@@ -84,20 +84,18 @@ type RangeDistribution = {
   points: number;
 };
 
-export const assignDailyCoinPoints = async (
-  tournamentStartDate: Date
-) => {
+export const assignDailyCoinPoints = async (tournamentStartDate: Date) => {
   return prisma.$transaction(async (tx) => {
     // 1️⃣ Fetch active config
     const config = await tx.gameConfig.findFirst({
       where: { isActive: true },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
 
     if (!config) {
       throw new ApiError({
         statusCode: 500,
-        message: "Active game config not found",
+        message: 'Active game config not found',
       });
     }
 
@@ -106,14 +104,12 @@ export const assignDailyCoinPoints = async (
     if (!(pointsConfig as any)?.daily_points_distribution) {
       throw new ApiError({
         statusCode: 500,
-        message: "Daily points distribution missing in config",
+        message: 'Daily points distribution missing in config',
       });
     }
 
-    const {
-      min_participants_for_percentiles,
-      daily_points_distribution,
-    } = pointsConfig as any;
+    const { min_participants_for_percentiles, daily_points_distribution } =
+      pointsConfig as any;
 
     // 2️⃣ Count participants
     const totalParticipants = await tx.dailyLeaderboard.count({
@@ -139,16 +135,15 @@ export const assignDailyCoinPoints = async (
     `;
 
     // 4️⃣ Decide percentile or rank mode
-    const usePercentile =
-      totalParticipants >= min_participants_for_percentiles;
+    const usePercentile = totalParticipants >= min_participants_for_percentiles;
 
-    let caseStatements = "";
+    let caseStatements = '';
 
     if (usePercentile) {
       // ---------- PERCENTILE MODE ----------
       caseStatements = daily_points_distribution
         .map((item: RangeDistribution) => {
-          const [min, max] = item.range.split("-").map(Number);
+          const [min, max] = item.range.split('-').map(Number);
 
           return `
             WHEN r.pct > ${min / 100} 
@@ -156,7 +151,7 @@ export const assignDailyCoinPoints = async (
             THEN ${item.points}
           `;
         })
-        .join("\n");
+        .join('\n');
 
       await tx.$executeRawUnsafe(`
         WITH ranked AS (
@@ -179,8 +174,8 @@ export const assignDailyCoinPoints = async (
       // ---------- RANK MODE ----------
       caseStatements = daily_points_distribution
         .map((item: RangeDistribution) => {
-          if (item.range.includes("-")) {
-            const [min, max] = item.range.split("-").map(Number);
+          if (item.range.includes('-')) {
+            const [min, max] = item.range.split('-').map(Number);
             return `
               WHEN d.rank BETWEEN ${min} AND ${max}
               THEN ${item.points}
@@ -193,7 +188,7 @@ export const assignDailyCoinPoints = async (
             `;
           }
         })
-        .join("\n");
+        .join('\n');
 
       await tx.$executeRawUnsafe(`
         UPDATE "DailyLeaderboard" d
@@ -229,7 +224,7 @@ export const assignDailyCoinPoints = async (
 //     { userId: string; rank: number; coinPoints: string }[]
 //   >`
 //   WITH room AS (
-//     SELECT 
+//     SELECT
 //       id,
 //       "userId",
 //       "bestScore",
@@ -242,7 +237,7 @@ export const assignDailyCoinPoints = async (
 //     WHERE "tournamentId" = ${tournamentId}
 //   ),
 //   ranked AS (
-//     SELECT 
+//     SELECT
 //       id,
 //       "userId",
 //       rn,
@@ -254,7 +249,7 @@ export const assignDailyCoinPoints = async (
 //         WHEN total >= 50 AND (rn::float / total) <= 0.10 THEN 1.5
 //         WHEN total >= 50 AND (rn::float / total) <= 0.45 THEN 1.0
 //         WHEN total >= 50 THEN 0.0
-        
+
 //         WHEN total < 50 AND rn = 1 THEN 5.0
 //         WHEN total < 50 AND rn = 2 THEN 3.0
 //         WHEN total < 50 AND rn = 3 THEN 2.0
@@ -264,7 +259,7 @@ export const assignDailyCoinPoints = async (
 //     FROM room
 //   )
 //   UPDATE "InstantLeaderboard" d
-//   SET 
+//   SET
 //     "rank" = r.rn,
 //     "coinPoints" = r.cp
 //   FROM ranked r
@@ -276,9 +271,7 @@ export const assignDailyCoinPoints = async (
 //   return results;
 // };
 
-export const assignInstantCoinPointsHandler = async (
-  tournamentId: string
-) => {
+export const assignInstantCoinPointsHandler = async (tournamentId: string) => {
   return prisma.$transaction(async (tx) => {
     // 1️⃣ Validate tournament
     const tournament = await tx.instantTournament.findUnique({
@@ -286,23 +279,23 @@ export const assignInstantCoinPointsHandler = async (
       select: { status: true },
     });
 
-    if (!tournament || tournament.status !== "CLOSED") {
+    if (!tournament || tournament.status !== 'CLOSED') {
       throw new ApiError({
         statusCode: 400,
-        message: "invalid instant room",
+        message: 'invalid instant room',
       });
     }
 
     // 2️⃣ Fetch active config
     const config = await tx.gameConfig.findFirst({
       where: { isActive: true },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
 
     if (!config) {
       throw new ApiError({
         statusCode: 500,
-        message: "Active game config not found",
+        message: 'Active game config not found',
       });
     }
 
@@ -311,14 +304,12 @@ export const assignInstantCoinPointsHandler = async (
     if (!(pointsConfig as any)?.instant_points_distribution) {
       throw new ApiError({
         statusCode: 500,
-        message: "Instant distribution missing in config",
+        message: 'Instant distribution missing in config',
       });
     }
 
-    const {
-      min_participants_for_percentiles,
-      instant_points_distribution,
-    } = pointsConfig as any;
+    const { min_participants_for_percentiles, instant_points_distribution } =
+      pointsConfig as any;
 
     // 3️⃣ Count participants
     const totalParticipants = await tx.instantLeaderboard.count({
@@ -331,17 +322,17 @@ export const assignInstantCoinPointsHandler = async (
 
     const usePercentile = totalParticipants >= min_participants_for_percentiles;
 
-    let caseStatements = "";
+    let caseStatements = '';
 
     // ----------- Percentile Mode -----------
     if (usePercentile) {
       caseStatements = instant_points_distribution
         .map((item: RangeDistribution) => {
-          if (!item.range.includes("-")) {
+          if (!item.range.includes('-')) {
             return null;
           }
 
-          const [min, max] = item.range.split("-").map(Number);
+          const [min, max] = item.range.split('-').map(Number);
 
           return `
             WHEN (r.rn::float / r.total) > ${min / 100}
@@ -350,7 +341,7 @@ export const assignInstantCoinPointsHandler = async (
           `;
         })
         .filter(Boolean)
-        .join("\n");
+        .join('\n');
 
       return await tx.$queryRawUnsafe(`
         WITH room AS (
@@ -391,8 +382,8 @@ export const assignInstantCoinPointsHandler = async (
     // -------------- Rank Mode -------------
     caseStatements = instant_points_distribution
       .map((item: RangeDistribution) => {
-        if (item.range.includes("-")) {
-          const [min, max] = item.range.split("-").map(Number);
+        if (item.range.includes('-')) {
+          const [min, max] = item.range.split('-').map(Number);
           return `
             WHEN r.rn BETWEEN ${min} AND ${max}
             THEN ${item.points}
@@ -405,7 +396,7 @@ export const assignInstantCoinPointsHandler = async (
           `;
         }
       })
-      .join("\n");
+      .join('\n');
 
     return await tx.$queryRawUnsafe(`
       WITH room AS (
@@ -621,6 +612,16 @@ export const getDailyUserLeaderboardHandler = async (today: Date) => {
   const leaderboard = await prisma.dailyUserLeaderboard.findMany({
     where: {
       date: today,
+    },
+    select: {
+      userId: true,
+      rank: true,
+      totalCoinPoints: true,
+      user: {
+        select: {
+          username: true,
+        },
+      },
     },
   });
 

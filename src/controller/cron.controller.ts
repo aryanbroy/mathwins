@@ -81,6 +81,7 @@ export const getDailyUserLeaderboard = asyncHandler(
     const today = new Date(
       Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
     );
+    console.log('Fetching all time leaderboad');
 
     const result = await getDailyUserLeaderboardHandler(today);
 
