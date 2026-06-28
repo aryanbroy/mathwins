@@ -7,11 +7,14 @@ import { generateSeed } from '../utils/seed.utils';
 import { generateQuestion } from '../utils/question.utils';
 import {
   fetchUserRank,
+  getCurrentScoreHandler,
   leaderBoardHandler,
   markDailyTounamentComplete,
   processQuestionScore,
   submitSession,
+  topThreeLeaderboardHandler,
 } from '../helpers/daily.helper';
+import { strict } from 'assert';
 
 export const fetchDailyAttempts = asyncHandler(
   async (req: Request, res: Response) => {
@@ -424,3 +427,20 @@ export const getDailyLeaderboard = asyncHandler(
       );
   }
 );
+
+export const getTopThree = asyncHandler(
+  async (req: Request, res: Response) => {
+    console.log("Fetching top 3 from daily");
+    console.log("Body: ", req.body)
+    console.log("Query: ", req.query)
+    const sessionId = req.body.sessionId
+    console.log("Session id:", sessionId)
+
+    const leaderboardUsers = await topThreeLeaderboardHandler()
+    const currentScore = await getCurrentScoreHandler(sessionId)
+
+    res.status(200).json(
+      new ApiResponse(200, { leaderboard: leaderboardUsers, currentScore: currentScore })
+    )
+  }
+)

@@ -201,3 +201,52 @@ export const fetchUserRank = async (userId: string) => {
 
   return rank;
 };
+
+export const topThreeLeaderboardHandler = async () => {
+  const now = new Date();
+  const tournamentStartDate = new Date(
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+  );
+
+  const leaderboard = await prisma.dailyLeaderboard.findMany({
+    where: {
+      date: tournamentStartDate,
+    },
+    orderBy: [
+      { bestScore: "desc" },
+      { updatedAt: "asc" }, // or createdAt, or userId
+    ],
+    take: 3,
+    select: {
+      userId: true,
+      bestScore: true,
+      user: {
+        select: {
+          username: true,
+        },
+      },
+    },
+  });
+
+  return leaderboard;
+};
+
+export const getCurrentScoreHandler = async (sessionId: string) => {
+  const session = await prisma.dailyTournamentSession.findFirst({
+    where: {
+      id: sessionId
+    },
+    select: {
+      currentScore: true,
+    },
+  });
+
+  if (!session) {
+    throw new ApiError({
+      statusCode: 400,
+      message: `Tournament session not found`,
+    });
+  }
+
+  return session.currentScore;
+};
