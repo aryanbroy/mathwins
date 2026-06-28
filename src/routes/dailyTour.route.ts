@@ -16,7 +16,7 @@ import { isAdmin } from '../middlewares/adminAuth.middleware';
 const router = Router();
 
 router.get('/attempts', verifyUser, fetchDailyAttempts);
-router.post('/create', createDailyTournament);
+router.post('/create', isAdmin, createDailyTournament);
 router.get('/start', verifyUser, fetchDailyTournament);
 
 router.post('/session/create', verifyUser, createDailyTournamentSession);
